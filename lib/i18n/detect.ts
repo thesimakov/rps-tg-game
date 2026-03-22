@@ -4,6 +4,9 @@ import { SUPPORTED_LOCALES } from "./types"
 /** User-chosen UI language; if set, overrides Telegram / browser detection. */
 export const LOCALE_STORAGE_KEY = "rps_ui_locale"
 
+/** Mirror when `localStorage` is blocked (some in-app browsers). */
+const SESSION_LOCALE_KEY = "rps_ui_locale"
+
 function isAppLocale(v: string): v is AppLocale {
   return (SUPPORTED_LOCALES as readonly string[]).includes(v)
 }
@@ -12,6 +15,12 @@ export function readSavedLocale(): AppLocale | null {
   if (typeof window === "undefined") return null
   try {
     const raw = window.localStorage.getItem(LOCALE_STORAGE_KEY)
+    if (raw && isAppLocale(raw)) return raw
+  } catch {
+    // ignore
+  }
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_LOCALE_KEY)
     if (raw && isAppLocale(raw)) return raw
   } catch {
     // ignore
@@ -26,12 +35,22 @@ export function writeSavedLocale(locale: AppLocale): void {
   } catch {
     // ignore
   }
+  try {
+    window.sessionStorage.setItem(SESSION_LOCALE_KEY, locale)
+  } catch {
+    // ignore
+  }
 }
 
 export function clearSavedLocale(): void {
   if (typeof window === "undefined") return
   try {
     window.localStorage.removeItem(LOCALE_STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+  try {
+    window.sessionStorage.removeItem(SESSION_LOCALE_KEY)
   } catch {
     // ignore
   }

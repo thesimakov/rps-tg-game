@@ -1,6 +1,14 @@
 "use client"
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react"
 import type { AppLocale } from "./types"
 import {
   getAutoDetectedLocale,
@@ -37,10 +45,11 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocale] = useState<AppLocale>(() => getClientAppLocale())
-  const [overridden, setOverridden] = useState(() => readSavedLocale() !== null)
+  /** Same on server and first client frame — avoids SSR/hydration mismatch with Telegram/browser locale. */
+  const [locale, setLocale] = useState<AppLocale>("en")
+  const [overridden, setOverridden] = useState(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setLocale(getClientAppLocale())
     setOverridden(readSavedLocale() !== null)
   }, [])

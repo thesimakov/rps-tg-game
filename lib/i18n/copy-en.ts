@@ -43,8 +43,6 @@ export const en = {
   entryBets: "Bets",
   entryGuest: "Continue as guest",
   entryLanguage: "Language",
-  entryLangEnglish: "English",
-  entryLangRussian: "Russian",
   entryLangAuto: "Use Telegram / browser default",
 
   loaderArena: "LOADING ARENA",

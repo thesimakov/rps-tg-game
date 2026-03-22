@@ -75,7 +75,7 @@ export function EntryScreen() {
                   : "text-white/75 hover:bg-white/10"
               }`}
             >
-              {t("entryLangEnglish")}
+              English
             </button>
             <button
               type="button"
@@ -86,7 +86,7 @@ export function EntryScreen() {
                   : "text-white/75 hover:bg-white/10"
               }`}
             >
-              {t("entryLangRussian")}
+              Русский
             </button>
           </div>
           {isLocaleOverridden && (
