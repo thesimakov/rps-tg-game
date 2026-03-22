@@ -11,6 +11,7 @@ import { isServerPlayerId } from "@/lib/platform-user"
 import { useI18n } from "@/lib/i18n/context"
 import type { Translate } from "@/lib/i18n/context"
 import { BOSS_REWARD_LABEL_KEY } from "@/lib/i18n/boss-reward-keys"
+import { resolveWeeklyEventUi } from "@/lib/i18n/weekly-event-ui"
 
 const BASE_MOVES: { key: Move; icon: string; color: string }[] = [
   { key: "rock", icon: "\uD83E\uDEA8", color: "border-secondary/50 shadow-secondary/10" },
@@ -574,6 +575,9 @@ export function GameArena() {
   const isBlindLuckMode = activeMode === "blind_luck" || !!weeklyRules?.hideOpponentBet
   const stakeMultiplier = Math.max(1, Math.round(getEffectiveStake(roundCount) / Math.max(1, currentBet)))
   const bankDisplay = isBlindLuckMode ? `${formatAmount(playerStakeNow)} + ?` : formatAmount(bankAmount)
+  const weeklyBannerTitle = weeklyRules?.event
+    ? resolveWeeklyEventUi(weeklyRules.event.mode, weeklyRules.event.title, weeklyRules.event.description, t).title
+    : ""
 
   return (
     <div className="flex flex-col min-h-screen relative px-4 py-4 arena-bg">
@@ -582,7 +586,7 @@ export function GameArena() {
         {weeklyRules?.event && (
           <div className="mb-3 flex items-center justify-center">
             <span className="px-3 py-1 rounded-full text-[10px] uppercase tracking-wide font-bold bg-sky-500/20 border border-sky-400/40 text-sky-200">
-              {weeklyRules.event.title}
+              {weeklyBannerTitle}
             </span>
           </div>
         )}

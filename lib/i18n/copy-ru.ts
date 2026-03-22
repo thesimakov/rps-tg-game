@@ -272,6 +272,16 @@ export const ru = {
   liveopsLoadError: "Не удалось загрузить прогресс событий",
   liveopsWeeklyEvent: "Событие недели",
   liveopsNoEvent: "Нет события",
+  liveopsWeeklyElementsTitle: "Турнир стихий",
+  liveopsWeeklyElementsDesc:
+    "Доступны только Огонь, Вода и Камень. Награды за победы удвоены.",
+  liveopsWeeklyTimeTitle: "Время — деньги",
+  liveopsWeeklyTimeDesc: "Ставка автоматически удваивается каждые 2 раунда.",
+  liveopsWeeklyBlindTitle: "Слепая удача",
+  liveopsWeeklyBlindDesc: "Ставка соперника скрыта до конца раунда.",
+  liveopsWeeklyBossTitle: "Босс-неделя",
+  liveopsWeeklyBossDesc:
+    "Победите адаптивного NPC-босса и получите гарантированный редкий сундук.",
   liveopsEnterBoss: "Войти в бой с Боссом",
   liveopsBattlePass: "Боевой пропуск",
   liveopsInfo: "Информация",

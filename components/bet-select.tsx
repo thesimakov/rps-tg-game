@@ -5,6 +5,7 @@ import { formatAmount } from "@/lib/format-amount"
 import { ArrowLeft, Coins, Flame } from "lucide-react"
 import { useI18n } from "@/lib/i18n/context"
 import type { Translate } from "@/lib/i18n/context"
+import { resolveWeeklyEventUi } from "@/lib/i18n/weekly-event-ui"
 
 /** Ставка и режим: 5,10 = быстрая игра (1 ход); 25,50 = 3 хода; 100,250 = 5 ходов */
 const BET_OPTIONS: { value: number; rounds: 1 | 3 | 5 }[] = [
@@ -31,6 +32,10 @@ function getTierBadge(rounds: number, t: Translate) {
 export function BetSelect() {
   const { t } = useI18n()
   const { setScreen, setCurrentBet, setTotalRounds, player, setPlayer, toDisplayAmount, currencyLabel, weeklyRules } = useGame()
+
+  const weeklyUi = weeklyRules
+    ? resolveWeeklyEventUi(weeklyRules.event.mode, weeklyRules.event.title, weeklyRules.event.description, t)
+    : null
 
   const handleSelectBet = (value: number, rounds: 1 | 3 | 5) => {
     if (player.balance < value) return
@@ -71,10 +76,10 @@ export function BetSelect() {
         {t("betSelectHint")}
       </p>
 
-      {weeklyRules && (
+      {weeklyRules && weeklyUi && (
         <div className="w-full max-w-lg mb-5 rounded-2xl border border-sky-400/30 bg-sky-500/10 p-3">
-          <p className="text-sm font-semibold text-sky-200">{weeklyRules.event.title}</p>
-          <p className="text-xs text-white/75 mt-1">{weeklyRules.event.description}</p>
+          <p className="text-sm font-semibold text-sky-200">{weeklyUi.title}</p>
+          <p className="text-xs text-white/75 mt-1">{weeklyUi.description}</p>
         </div>
       )}
 

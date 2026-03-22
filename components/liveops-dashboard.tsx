@@ -12,6 +12,7 @@ import {
 import { Check, Info, Lock, Sparkles, Swords, Trophy } from "lucide-react"
 import { isServerPlayerId } from "@/lib/platform-user"
 import { useI18n } from "@/lib/i18n/context"
+import { resolveWeeklyEventUi } from "@/lib/i18n/weekly-event-ui"
 
 interface RewardDto {
   kind: string
@@ -113,6 +114,12 @@ export function LiveOpsDashboard() {
   const [data, setData] = useState<StateResponse | null>(null)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [showPassInfo, setShowPassInfo] = useState(false)
+
+  const weeklyEventLines = useMemo(() => {
+    const ev = data?.weeklyEvent
+    if (!ev) return { title: t("liveopsNoEvent"), description: "" }
+    return resolveWeeklyEventUi(ev.mode, ev.title, ev.description, t)
+  }, [data?.weeklyEvent, t])
 
   const reload = async () => {
     if (!isServerPlayerId(player.id)) return
@@ -242,8 +249,8 @@ export function LiveOpsDashboard() {
           <p className="text-sm text-muted-foreground mt-3">{t("commonLoading")}</p>
         ) : (
           <>
-            <p className="text-base text-foreground mt-3 font-medium">{data?.weeklyEvent?.title ?? t("liveopsNoEvent")}</p>
-            <p className="text-sm text-muted-foreground mt-1">{data?.weeklyEvent?.description ?? ""}</p>
+            <p className="text-base text-foreground mt-3 font-medium">{weeklyEventLines.title}</p>
+            <p className="text-sm text-muted-foreground mt-1">{weeklyEventLines.description}</p>
             {data?.weeklyEvent?.mode === "boss_week" && (
               <button
                 type="button"

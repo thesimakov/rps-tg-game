@@ -270,6 +270,16 @@ export const en = {
   liveopsLoadError: "Could not load event progress",
   liveopsWeeklyEvent: "Weekly event",
   liveopsNoEvent: "No event",
+  liveopsWeeklyElementsTitle: "Tournament of Elements",
+  liveopsWeeklyElementsDesc:
+    "Only Fire, Water, and Rock are available. Win rewards are doubled.",
+  liveopsWeeklyTimeTitle: "Time is Money",
+  liveopsWeeklyTimeDesc: "Your bet automatically doubles every 2 rounds.",
+  liveopsWeeklyBlindTitle: "Blind Luck",
+  liveopsWeeklyBlindDesc: "The opponent's bet stays hidden until the round ends.",
+  liveopsWeeklyBossTitle: "Boss Week",
+  liveopsWeeklyBossDesc:
+    "Defeat the adaptive NPC boss and earn a guaranteed rare chest.",
   liveopsEnterBoss: "Fight the Boss",
   liveopsBattlePass: "Battle pass",
   liveopsInfo: "Info",
