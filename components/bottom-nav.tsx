@@ -34,7 +34,7 @@ export function BottomNav() {
     [t]
   )
 
-  if (["arena", "matchmaking", "result"].includes(screen)) return null
+  if (["arena", "pvp-arena", "matchmaking", "result"].includes(screen)) return null
 
   return (
     <nav

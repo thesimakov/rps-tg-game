@@ -9,6 +9,7 @@ import { MainMenu } from "@/components/main-menu"
 import { BetSelect } from "@/components/bet-select"
 import { Matchmaking } from "@/components/matchmaking"
 import { GameArena } from "@/components/game-arena"
+import { PvpOnlineArena } from "@/components/pvp-online-arena"
 import { ResultScreen } from "@/components/result-screen"
 import { BossRewardScreen } from "@/components/boss-reward-screen"
 import { LeaderboardScreen } from "@/components/leaderboard-screen"
@@ -40,6 +41,7 @@ function GameScreen() {
       {screen === "bet-select" && <BetSelect />}
       {screen === "matchmaking" && <Matchmaking />}
       {screen === "arena" && <GameArena />}
+      {screen === "pvp-arena" && <PvpOnlineArena />}
       {screen === "result" && <ResultScreen />}
       {screen === "boss-reward" && <BossRewardScreen />}
       {screen === "leaderboard" && <LeaderboardScreen />}
@@ -78,7 +80,7 @@ function GameLayout() {
     )
   }
 
-  const hideNav = ["matchmaking", "result", "entry"].includes(screen)
+  const hideNav = ["matchmaking", "result", "entry", "pvp-arena"].includes(screen)
   const showLeftSidebar = !hideNav && screen !== "bets" && platformUser != null
   const showRightSidebar = !hideNav && platformUser != null
   const showBottomNav = !hideNav && platformUser != null

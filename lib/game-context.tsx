@@ -19,6 +19,7 @@ export type GameScreen =
   | "bet-select"
   | "matchmaking"
   | "arena"
+  | "pvp-arena"
   | "result"
   | "boss-reward"
   | "leaderboard"
@@ -278,6 +279,12 @@ interface GameState {
   weeklyRules: WeeklyRules | null
   /** Роботы для ставок и матчмейкинга (имена на языке клиента) */
   opponents: Player[]
+  /** Следующий переход в matchmaking — онлайн-дуэль (не подставлять бота). */
+  prepareOnlinePvp: (enabled: boolean) => void
+  /** Прочитать флаг онлайн-матча (синхронно, для первого кадра matchmaking). */
+  getOnlinePvpIntent: () => boolean
+  /** Подтянуть баланс и поля профиля с сервера (после онлайн-матча). */
+  syncPlayerFromServer: () => Promise<void>
 }
 
 const GameContext = createContext<GameState | null>(null)
@@ -605,6 +612,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     leaderboardDataRef.current = buildLeaderboardFromBots(opponents).map((e) => ({ ...e }))
     setBets(buildMockBetsFromBots(opponents))
   }, [opponents])
+
+  const onlinePvpNextRef = useRef(false)
+  const prepareOnlinePvp = useCallback((enabled: boolean) => {
+    onlinePvpNextRef.current = enabled
+  }, [])
+  const getOnlinePvpIntent = useCallback(() => onlinePvpNextRef.current, [])
 
   const betResponseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** Таймер: через 1 мин без принятия ставки робот подхватывает, если сумма ≤ 100 */
@@ -952,10 +965,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setOpponent(opponents[idx])
   }, [opponents])
 
+  const syncPlayerFromServer = useCallback(async () => {
+    const uid = player.id
+    if (!isServerPlayerId(uid)) return
+    const res = await postJSON<{
+      ok: boolean
+      player?: import("./player-store").StoredPlayer
+    }>("/api/player/load", { userId: uid })
+    if (!res?.ok || !res.player) return
+    const serverPlayer = res.player
+    setPlayer((p) => ({
+      ...p,
+      ...serverPlayer,
+      levelXp: deriveInitialLevelXp({ levelXp: serverPlayer.levelXp, ratingPoints: serverPlayer.ratingPoints }),
+    }))
+  }, [player.id])
+
   const handleSetScreen = useCallback(
     (s: GameScreen) => {
       if (s === "matchmaking") {
-        pickRandomOpponent()
+        if (!onlinePvpNextRef.current) pickRandomOpponent()
+        else setOpponent(null)
       }
       setScreen(s)
     },
@@ -1336,6 +1366,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         currencyLabel,
         weeklyRules,
         opponents,
+        prepareOnlinePvp,
+        getOnlinePvpIntent,
+        syncPlayerFromServer,
       }}
     >
       {children}
