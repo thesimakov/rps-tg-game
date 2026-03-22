@@ -3,7 +3,7 @@
 import { GameProvider, useGame } from "@/lib/game-context"
 import { useEffect, useState } from "react"
 import type { CSSProperties } from "react"
-import { showFriendsPicker } from "@/lib/vk-bridge"
+import { showFriendsPicker } from "@/lib/platform-bridge"
 import { MainMenu } from "@/components/main-menu"
 import { BetSelect } from "@/components/bet-select"
 import { Matchmaking } from "@/components/matchmaking"
@@ -24,15 +24,16 @@ import { ParticlesBg } from "@/components/particles-bg"
 import { EntryScreen } from "@/components/entry-screen"
 import { GameLoader } from "@/components/game-loader"
 import { AdminScreen } from "@/components/admin-screen"
+import { isServerPlayerId } from "@/lib/platform-user"
 
 function GameScreen() {
-  const { screen, vkUser } = useGame()
-  const isEntry = screen === "entry" || (screen === "menu" && !vkUser)
+  const { screen, platformUser } = useGame()
+  const isEntry = screen === "entry" || (screen === "menu" && !platformUser)
 
   return (
     <>
       {isEntry && <EntryScreen />}
-      {screen === "menu" && vkUser && <MainMenu />}
+      {screen === "menu" && platformUser && <MainMenu />}
       {screen === "levels" && <LevelsScreen />}
       {screen === "bets" && <BetsScreen />}
       {screen === "bet-select" && <BetSelect />}
@@ -50,7 +51,7 @@ function GameScreen() {
 }
 
 function GameLayout() {
-  const { screen, vkUser, player, setPlayer, isLoading, loadingStage, loadingProgress } = useGame()
+  const { screen, platformUser, player, setPlayer, isLoading, loadingStage, loadingProgress } = useGame()
   const [hideLowBalanceHint, setHideLowBalanceHint] = useState(false)
   const [showLoader, setShowLoader] = useState(true)
 
@@ -76,12 +77,12 @@ function GameLayout() {
   }
 
   const hideNav = ["matchmaking", "result", "entry"].includes(screen)
-  const showLeftSidebar = !hideNav && screen !== "bets" && vkUser != null
-  const showRightSidebar = !hideNav && vkUser != null
-  const showBottomNav = !hideNav && vkUser != null
+  const showLeftSidebar = !hideNav && screen !== "bets" && platformUser != null
+  const showRightSidebar = !hideNav && platformUser != null
+  const showBottomNav = !hideNav && platformUser != null
 
-  const isVkPlayer = player.id.startsWith("vk_")
-  const showLowBalanceHint = vkUser != null && isVkPlayer && player.balance < 50 && !hideLowBalanceHint
+  const isServerPlayer = isServerPlayerId(player.id)
+  const showLowBalanceHint = platformUser != null && isServerPlayer && player.balance < 50 && !hideLowBalanceHint
 
   const handleLowBalanceInvite = async () => {
     try {

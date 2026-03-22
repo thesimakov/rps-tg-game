@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef } from "react"
 import { useGame } from "@/lib/game-context"
 import { formatAmount } from "@/lib/format-amount"
-import { purchaseVKVoices, isVKEnvironment, showFriendsPicker, showInviteBox, joinVKGroup, VK_VOICE_PACKS } from "@/lib/vk-bridge"
+import { purchaseCoins, isMiniAppEnvironment, showFriendsPicker, showInviteBox, joinCommunity, COIN_PACKS } from "@/lib/platform-bridge"
 import { canPurchaseItem, isItemOwned, type ShopItemId } from "@/lib/shop-rules"
 import { getDiscountedPrice, getLevelFromXp, getShopDiscountPercent } from "@/lib/level-system"
 import { ArrowLeft, Crown, Zap, Sparkles, Box, Palette, Coins, Wallet, Flame, Droplets, UserPlus, Share2, X, Hourglass, Ticket } from "lucide-react"
+import { isServerPlayerId } from "@/lib/platform-user"
 
 const INVITED_SLOTS = 4
 const INVITE_REWARD = 100
@@ -211,10 +212,13 @@ function normalizeInvitedSlots(
 }
 
 export function ShopScreen() {
-  const { setScreen, player, setPlayer, vkUser, lavaCardStock, purchaseLavaCard, purchaseWaterCard, trackSpend, toDisplayAmount, currencyLabel } = useGame()
+  const { setScreen, player, setPlayer, platformUser, lavaCardStock, purchaseLavaCard, purchaseWaterCard, trackSpend, toDisplayAmount, currencyLabel } = useGame()
   const [topUpLoading, setTopUpLoading] = useState<number | null>(null)
   const [buyingItemId, setBuyingItemId] = useState<string | null>(null)
   const [topUpError, setTopUpError] = useState<string>("")
+  const [topUpHint, setTopUpHint] = useState<string>("")
+  const [pendingTonTopupId, setPendingTonTopupId] = useState<string>("")
+  const [checkingTon, setCheckingTon] = useState(false)
   const [openingChest, setOpeningChest] = useState<{ type: ChestType; prizes: ChestPrize[] } | null>(null)
   const [chestPhase, setChestPhase] = useState<"fly" | "open" | "reward" | "collect">("fly")
   const [inviteLoading, setInviteLoading] = useState(false)
@@ -320,12 +324,13 @@ export function ShopScreen() {
 
   const handleTopUp = async (amount: number) => {
     setTopUpError("")
+    setTopUpHint("")
 
     // Лимит пополнений: не более 3000 монет в сутки на пользователя.
     try {
-      if (typeof window !== "undefined" && player.id.startsWith("vk_")) {
+      if (typeof window !== "undefined" && isServerPlayerId(player.id)) {
         const today = new Date().toISOString().slice(0, 10)
-        const key = `rps_vk_topup_${player.id}_${today}`
+        const key = `rps_topup_${player.id}_${today}`
         const usedRaw = window.localStorage.getItem(key)
         const used = Number(usedRaw) || 0
         if (used + amount > 3000) {
@@ -337,38 +342,100 @@ export function ShopScreen() {
       // если localStorage недоступен, просто продолжаем без учёта лимита
     }
 
-    // Вне окружения ВК сразу показываем подсказку и ничего не делаем.
-    if (!isVKEnvironment()) {
-      setTopUpError("Пополнение доступно только внутри ВКонтакте. Откройте игру как мини‑приложение ВК и попробуйте ещё раз.")
+    // Вне окружения мини-приложения сразу показываем подсказку и ничего не делаем.
+    if (!isMiniAppEnvironment()) {
+      setTopUpError("Пополнение доступно только внутри Telegram Mini App.")
       return
     }
 
     setTopUpLoading(amount)
     try {
-      const success = await purchaseVKVoices(amount)
-      // В продакшене баланс должен обновляться после подтверждения платежа на бэкенде (см. docs/VK_INTEGRATION.md)
+      const isTelegramTopup = player.id.startsWith("tg_")
+      let transferUrl: string | undefined
+      let paymentMemo: string | undefined
+      if (isTelegramTopup) {
+        const create = await fetch("/api/ton/topup/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: player.id, amount }),
+        })
+        const createJson = (await create.json()) as {
+          ok?: boolean
+          request?: { id: string; transferUrl: string; memo: string }
+        }
+        if (!create.ok || !createJson.ok || !createJson.request) {
+          setTopUpError("Не удалось создать TON-платеж. Попробуйте позже.")
+          return
+        }
+        transferUrl = createJson.request.transferUrl
+        paymentMemo = createJson.request.memo
+        setPendingTonTopupId(createJson.request.id)
+      }
+
+      const success = await purchaseCoins(amount, { transferUrl, paymentMemo })
+      // Баланс обновляется только после подтверждения платежа на бэкенде.
       if (success) {
-        setPlayer((p) => ({
-          ...p,
-          balance: p.balance + amount,
-          totalPurchases: (p.totalPurchases ?? 0) + amount,
-        }))
-        try {
-          if (typeof window !== "undefined" && player.id.startsWith("vk_")) {
-            const today = new Date().toISOString().slice(0, 10)
-            const key = `rps_vk_topup_${player.id}_${today}`
-            const usedRaw = window.localStorage.getItem(key)
-            const used = Number(usedRaw) || 0
-            window.localStorage.setItem(key, String(used + amount))
+        if (isTelegramTopup) {
+          setTopUpHint("Откройте кошелек и выполните перевод. Затем нажмите «Проверить оплату».")
+        } else {
+          setPlayer((p) => ({
+            ...p,
+            balance: p.balance + amount,
+            totalPurchases: (p.totalPurchases ?? 0) + amount,
+          }))
+          try {
+            if (typeof window !== "undefined" && isServerPlayerId(player.id)) {
+              const today = new Date().toISOString().slice(0, 10)
+              const key = `rps_topup_${player.id}_${today}`
+              const usedRaw = window.localStorage.getItem(key)
+              const used = Number(usedRaw) || 0
+              window.localStorage.setItem(key, String(used + amount))
+            }
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
         }
       } else {
-        setTopUpError("Не удалось открыть форму оплаты ВКонтакте. Попробуйте ещё раз или перезапустите мини‑приложение.")
+        setTopUpError("Не удалось открыть форму оплаты. Попробуйте ещё раз или перезапустите мини‑приложение.")
       }
     } finally {
       setTopUpLoading(null)
+    }
+  }
+
+  const handleCheckTonTopup = async () => {
+    if (!pendingTonTopupId) return
+    setCheckingTon(true)
+    setTopUpError("")
+    setTopUpHint("")
+    try {
+      const res = await fetch("/api/ton/topup/auto-confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: player.id }),
+      })
+      const json = (await res.json()) as { ok?: boolean; error?: string; confirmed?: boolean; balance?: number; credited?: number }
+      if (!res.ok || !json.ok) {
+        const msg =
+          json.error === "no_tonapi_key"
+            ? "На сервере не настроен TONAPI_API_KEY для проверки транзакции."
+            : "Подтверждение не прошло. Подождите и попробуйте снова."
+        setTopUpError(msg)
+        return
+      }
+      if (!json.confirmed) {
+        setTopUpHint("Платеж пока не найден в сети. Подождите 10-30 секунд и нажмите ещё раз.")
+        return
+      }
+      setPlayer((p) => ({
+        ...p,
+        balance: typeof json.balance === "number" ? json.balance : p.balance,
+        totalPurchases: (p.totalPurchases ?? 0) + (json.credited ?? 0),
+      }))
+      setTopUpHint("Платеж подтвержден сервером, монеты зачислены.")
+      setPendingTonTopupId("")
+    } finally {
+      setCheckingTon(false)
     }
   }
 
@@ -390,10 +457,10 @@ export function ShopScreen() {
           return { ...p, invitedFriends: next }
         })
 
-        // После выбора друга сразу открываем стандартное окно приглашения ВК,
+        // После выбора друга сразу открываем стандартное окно приглашения,
         // чтобы ему пришло уведомление «Начать играть».
         try {
-          if (isVKEnvironment()) {
+          if (isMiniAppEnvironment()) {
             await showInviteBox()
           }
         } catch {
@@ -433,7 +500,7 @@ export function ShopScreen() {
     setGroupSubError("")
     setGroupSubLoading(true)
     try {
-      const ok = await joinVKGroup()
+      const ok = await joinCommunity()
       if (ok) {
         setPlayer((p) => ({
           ...p,
@@ -448,9 +515,9 @@ export function ShopScreen() {
 
   const handleRedeemPromo = async () => {
     if (!promoCode.trim() || promoStatus === "success") return
-    if (!vkUser || !player.id.startsWith("vk_")) {
+    if (!platformUser || !isServerPlayerId(player.id)) {
       setPromoStatus("error")
-      setPromoMessage("Промокоды доступны после входа через ВКонтакте.")
+      setPromoMessage("Промокоды доступны после входа в Telegram Mini App.")
       return
     }
     setPromoStatus("idle")
@@ -636,7 +703,7 @@ export function ShopScreen() {
         </p>
       </div>
 
-      {/* Пополнение баланса через ВК */}
+      {/* Пополнение баланса */}
       <div className="w-full max-w-lg mb-6 bg-primary/10 border border-primary/25 rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Wallet className="h-5 w-5 text-primary" />
@@ -646,20 +713,23 @@ export function ShopScreen() {
           Выберите удобный пакет пополнения.
         </p>
         <p className="text-xs text-muted-foreground mb-3">
-          Внутренний курс: 1 монета = 0,1 руб.
+          Внутренний курс: 1 монета = 0,1 TON-экв.
         </p>
         {topUpError && (
           <p className="text-xs text-red-500 mb-2 font-medium">
             {topUpError}
           </p>
         )}
-        {!isVKEnvironment() && (
+        {topUpHint && (
+          <p className="text-xs text-emerald-400 mb-2 font-medium">{topUpHint}</p>
+        )}
+        {!isMiniAppEnvironment() && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
-            Для пополнения откройте приложение в ВКонтакте.
+            Для пополнения откройте приложение в Telegram.
           </p>
         )}
         <div className="flex flex-wrap gap-2">
-          {VK_VOICE_PACKS.map((pack) => (
+          {COIN_PACKS.map((pack) => (
             <button
               key={pack.amount}
               onClick={() => handleTopUp(pack.amount)}
@@ -671,6 +741,19 @@ export function ShopScreen() {
             </button>
           ))}
         </div>
+        {!!pendingTonTopupId && (
+          <div className="mt-3 rounded-xl border border-border/40 bg-card/40 p-3">
+            <p className="text-[11px] text-muted-foreground mb-2">После оплаты проверьте поступление автоматически.</p>
+            <button
+              type="button"
+              onClick={() => void handleCheckTonTopup()}
+              disabled={checkingTon}
+              className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold disabled:opacity-50"
+            >
+              {checkingTon ? "Проверяем..." : "Проверить оплату"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Награда за приглашение 4 друзей */}
@@ -680,11 +763,11 @@ export function ShopScreen() {
           <span className="font-bold text-base text-foreground">Получить {INVITE_REWARD} монет за приглашение 4 друзей</span>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Выберите друзей, пригласите их в игру. Когда они примут приглашение — появятся в ячейках. За 4 принявших приглашение — награда.
+          Пригласите друзей в игру. Когда они примут приглашение — появятся в ячейках. За 4 принявших приглашение — награда.
         </p>
-        {!isVKEnvironment() && (
+        {!isMiniAppEnvironment() && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
-            Откройте приложение в ВКонтакте, чтобы выбирать друзей и приглашать.
+            Откройте приложение в Telegram, чтобы приглашать друзей.
           </p>
         )}
         <div className="grid grid-cols-4 gap-2 mb-3">
@@ -717,7 +800,7 @@ export function ShopScreen() {
                 <button
                   type="button"
                   onClick={() => handlePickFriend(index)}
-                  disabled={inviteLoading || !isVKEnvironment()}
+                  disabled={inviteLoading || !isMiniAppEnvironment()}
                   className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors rounded-lg border border-dashed border-border/50 py-2"
                 >
                   <UserPlus className="h-6 w-6" />
@@ -731,7 +814,7 @@ export function ShopScreen() {
           <button
             type="button"
             onClick={handleInviteFriends}
-            disabled={inviteLoading || !isVKEnvironment()}
+            disabled={inviteLoading || !isMiniAppEnvironment()}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary/80 text-primary-foreground text-sm font-bold transition-all active:scale-95 disabled:opacity-50"
           >
             <UserPlus className="h-4 w-4" />
@@ -760,20 +843,20 @@ export function ShopScreen() {
 
       {/* Блок «100 монет — расскажи друзьям» скрыт, так как приложению недоступно создание постов на стене */}
 
-      {/* Награда за подписку на группу ВК */}
+      {/* Награда за подписку на канал */}
       <div className="w-full max-w-lg mb-6 bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <UserPlus className="h-5 w-5 text-secondary" />
           <span className="font-bold text-base text-foreground">
-            Подпишитесь в нашу группу ВК и получите {GROUP_SUB_REWARD} монет
+            Подпишитесь на наш канал и получите {GROUP_SUB_REWARD} монет
           </span>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Нажмите «Подписаться» — мы автоматически подпишем вас на группу ВКонтакте и начислим награду один раз.
+          Нажмите «Подписаться» — откроем канал и начислим награду один раз.
         </p>
-        {!isVKEnvironment() && (
+        {!isMiniAppEnvironment() && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
-            Откройте приложение во ВКонтакте, чтобы подписаться на группу.
+            Откройте приложение в Telegram, чтобы подписаться на канал.
           </p>
         )}
         {groupSubError && (
@@ -784,7 +867,7 @@ export function ShopScreen() {
         <button
           type="button"
           onClick={handleGroupSubscribe}
-          disabled={!canClaimGroupReward || groupSubLoading || !isVKEnvironment() || !vkUser}
+          disabled={!canClaimGroupReward || groupSubLoading || !isMiniAppEnvironment() || !platformUser}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-secondary text-secondary-foreground text-sm font-bold transition-all active:scale-95 disabled:opacity-50"
         >
           <Share2 className="h-4 w-4" />

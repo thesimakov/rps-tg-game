@@ -1,8 +1,9 @@
 import { promises as fs } from "fs"
 import path from "path"
 import crypto from "crypto"
+import { isServerPlayerId } from "@/lib/platform-user"
 
-export type ReferralUserId = `vk_${number}` | string
+export type ReferralUserId = `tg_${number}` | string
 
 export interface ReferralUser {
   id: ReferralUserId
@@ -60,7 +61,7 @@ async function writeDb(db: ReferralDb) {
 }
 
 export function isValidVkUserId(id: string) {
-  return id.startsWith("vk_") && id.length > 3
+  return isServerPlayerId(id)
 }
 
 export async function upsertUser(userId: ReferralUserId) {

@@ -20,7 +20,24 @@ import { Label } from "@/components/ui/label"
 const now = () => Date.now()
 
 export function BetsScreen() {
-  const { bets, player, createBet, removeBet, pendingBet, setScreen, setCurrentBet, setOpponent, setTotalRounds, clearPendingBet, updatePendingBetAmount, vkUser, lavaCardStock, purchaseLavaCard, toDisplayAmount, currencyLabel } = useGame()
+  const {
+    bets,
+    player,
+    createBet,
+    removeBet,
+    pendingBet,
+    setScreen,
+    setCurrentBet,
+    setOpponent,
+    setTotalRounds,
+    clearPendingBet,
+    updatePendingBetAmount,
+    platformUser,
+    lavaCardStock,
+    purchaseLavaCard,
+    toDisplayAmount,
+    currencyLabel,
+  } = useGame()
   const [createOpen, setCreateOpen] = useState(false)
   const [lavaModalOpen, setLavaModalOpen] = useState(false)
   const [amount, setAmount] = useState("")
@@ -101,7 +118,7 @@ export function BetsScreen() {
     <div className="flex flex-col min-h-screen px-4 py-6">
       <div className="w-full max-w-lg flex items-center mb-6 mx-auto">
         <button
-          onClick={() => setScreen(vkUser ? "menu" : "entry")}
+          onClick={() => setScreen(platformUser ? "menu" : "entry")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
           aria-label="Назад"
         >
@@ -140,16 +157,16 @@ export function BetsScreen() {
       </div>
 
       <div className="w-full max-w-lg mx-auto flex flex-col gap-4">
-        {!vkUser && (
+        {!platformUser && (
           <p className="text-sm text-center py-2 px-3 rounded-xl bg-primary/15 border border-primary/30 text-primary">
             Войдите, чтобы создавать ставки и играть
           </p>
         )}
-        {vkUser && pendingBet ? (
+        {platformUser && pendingBet ? (
           <p className="text-sm text-muted-foreground text-center py-2">
             У вас уже есть ставка. Нажмите на неё, чтобы изменить размер или удалить.
           </p>
-        ) : vkUser ? (
+        ) : platformUser ? (
           <button
             onClick={() => setCreateOpen(true)}
             className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-accent/20 border border-accent/40 text-accent font-bold hover:bg-accent/30 transition-colors"
@@ -167,7 +184,7 @@ export function BetsScreen() {
               <button
                 key={bet.id}
                 onClick={() => {
-                  if (!vkUser) {
+                  if (!platformUser) {
                     setScreen("entry")
                     return
                   }

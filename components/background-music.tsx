@@ -5,7 +5,7 @@ import { Volume2, VolumeX } from "lucide-react"
 
 const STORAGE_KEY = "rps_bg_music"
 const VOLUME_KEY = "rps_bg_music_volume"
-// Учитываем basePath (GitHub Pages /rps-vk-game)
+// Учитываем basePath для деплоя со вложенным путём.
 const BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "")
 const MUSIC_SRC = `${BASE_PATH}/bg-music.mp3`
 
@@ -68,8 +68,8 @@ export function BackgroundMusic() {
     }
   }, [])
 
-  // Автоматически пытаемся запустить музыку сразу после успешного входа через ВК.
-  // GameProvider диспатчит событие rps_vk_login_success, когда авторизация завершена.
+  // Автоматически пытаемся запустить музыку сразу после успешного входа.
+  // GameProvider диспатчит событие rps_login_success, когда авторизация завершена.
   useEffect(() => {
     if (typeof window === "undefined") return
     const handler = () => {
@@ -79,9 +79,9 @@ export function BackgroundMusic() {
       if (!ready) return
       audio.play().catch(() => {})
     }
-    window.addEventListener("rps_vk_login_success", handler)
+    window.addEventListener("rps_login_success", handler)
     return () => {
-      window.removeEventListener("rps_vk_login_success", handler)
+      window.removeEventListener("rps_login_success", handler)
     }
   }, [enabled, ready])
 

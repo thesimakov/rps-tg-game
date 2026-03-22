@@ -10,6 +10,7 @@ import {
   unlockPremiumPass,
 } from "@/lib/liveops/client"
 import { Check, Info, Lock, Sparkles, Swords, Trophy } from "lucide-react"
+import { isServerPlayerId } from "@/lib/platform-user"
 
 interface RewardDto {
   kind: string
@@ -59,7 +60,7 @@ interface StateResponse {
   }
   weeklyEvent?: { title: string; description: string; mode: string }
   liveOpsState?: LiveOpsStateDto
-  vkSync?: { voicesBalance: number }
+  liveopsSync?: { voicesBalance: number }
   error?: string
 }
 
@@ -112,7 +113,7 @@ export function LiveOpsDashboard() {
   const [showPassInfo, setShowPassInfo] = useState(false)
 
   const reload = async () => {
-    if (!player.id.startsWith("vk_")) return
+    if (!isServerPlayerId(player.id)) return
     setLoading(true)
     setError(null)
     try {
@@ -123,7 +124,9 @@ export function LiveOpsDashboard() {
         ...p,
         liveOpsState: res.liveOpsState ? (res.liveOpsState as unknown as typeof p.liveOpsState) : p.liveOpsState,
         vkVoicesBalance:
-          typeof res.vkSync?.voicesBalance === "number" ? res.vkSync.voicesBalance : (p.vkVoicesBalance ?? 0),
+          typeof res.liveopsSync?.voicesBalance === "number"
+            ? res.liveopsSync.voicesBalance
+            : (p.vkVoicesBalance ?? 0),
       }))
     } catch {
       setError("Не удалось загрузить прогресс событий")
@@ -148,7 +151,7 @@ export function LiveOpsDashboard() {
     return m
   }, [data?.liveOpsState?.achievements])
 
-  if (!player.id.startsWith("vk_")) return null
+  if (!isServerPlayerId(player.id)) return null
 
   const pass = data?.liveOpsState?.pass
   const maxLevel = data?.config?.pass.maxLevel ?? 30

@@ -3,9 +3,10 @@
 import { useGame } from "@/lib/game-context"
 import { LogIn, Trophy, Coins, Ticket } from "lucide-react"
 import { useEffect, useState } from "react"
+import { isServerPlayerId } from "@/lib/platform-user"
 
 export function EntryScreen() {
-  const { setScreen, loginWithVK, loginWithoutVK, loginErrorMessage } = useGame()
+  const { setScreen, loginWithPlatform, loginAsGuest, loginErrorMessage } = useGame()
   const [showInviteCode, setShowInviteCode] = useState(false)
   const [inviteCode, setInviteCode] = useState("")
   const [inviteStatus, setInviteStatus] = useState<"idle" | "saved" | "error">("idle")
@@ -31,9 +32,9 @@ export function EntryScreen() {
       setInviteError("")
       return
     }
-    if (!code.startsWith("vk_") || code.length <= 3) {
+    if (!isServerPlayerId(code)) {
       setInviteStatus("error")
-      setInviteError("Неверный код. Пример: vk_123")
+      setInviteError("Неверный код. Пример: tg_123")
       return
     }
     if (typeof window !== "undefined") {
@@ -68,7 +69,7 @@ export function EntryScreen() {
           )}
           <button
             type="button"
-            onClick={() => loginWithVK()}
+            onClick={() => loginWithPlatform()}
             className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg transition-all active:scale-[0.98] shadow-lg shadow-primary/30"
           >
             <LogIn className="h-6 w-6" />
@@ -106,7 +107,7 @@ export function EntryScreen() {
                   <input
                     value={inviteCode}
                     onChange={(e) => { setInviteCode(e.target.value); setInviteStatus("idle"); setInviteError("") }}
-                    placeholder="Например: vk_123"
+                    placeholder="Например: tg_123"
                     className="flex-1 min-w-0 rounded-xl bg-slate-900/40 border border-white/15 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60"
                   />
                   <button
@@ -126,13 +127,13 @@ export function EntryScreen() {
                   <p className="mt-2 text-xs font-bold text-red-300">{inviteError}</p>
                 )}
                 <p className="mt-2 text-[11px] text-white/60 leading-snug">
-                  Привязка выполняется <span className="font-bold">один раз</span> после входа через ВК.
+                  Привязка выполняется <span className="font-bold">один раз</span> после входа в Telegram.
                 </p>
               </div>
             )}
           </div>
           <p className="text-center text-xs text-white/50">
-            Вход через профиль ВКонтакте. После входа можно играть, зарабатывать и тратить внутриигровые монеты и приглашать друзей.
+            Вход через профиль Telegram. После входа можно играть, зарабатывать и тратить внутриигровые монеты и приглашать друзей.
           </p>
 
           <button
@@ -153,10 +154,10 @@ export function EntryScreen() {
 
           <button
             type="button"
-            onClick={loginWithoutVK}
+            onClick={loginAsGuest}
             className="w-full flex items-center justify-center gap-3 py-3 rounded-2xl bg-white/5 border border-white/20 hover:bg-white/10 text-white/90 font-semibold transition-all active:scale-[0.98]"
           >
-            Войти без VK
+            Войти как гость
           </button>
         </div>
       </div>

@@ -1,12 +1,13 @@
 import { promises as fs } from "fs"
 import path from "path"
 import type { LiveOpsState } from "@/lib/liveops/types"
+import { isServerPlayerId } from "@/lib/platform-user"
 
 // Серверное хранилище профиля игрока на JSON-файле.
 // В проде по умолчанию файл лежит в /var/rps-data/players.json — один общий для всех деплоев.
 // В разработке используем локальный файл в папке проекта (./data/players.json), чтобы не требовать прав на /var.
 
-export type PlayerId = `vk_${number}` | string
+export type PlayerId = `tg_${number}` | string
 
 export interface StoredPlayer {
   id: PlayerId
@@ -65,8 +66,10 @@ export interface StoredPlayer {
   banUntil?: number
   /** Внутренние заметки для админки/разработчиков */
   notes?: string
-  /** Баланс голосов VK (серверная синхронизация). */
+  /** LiveOps: «голоса» (премиум-валюта в UI). Имя поля историческое — совместимость со старыми сохранениями. */
   vkVoicesBalance?: number
+  /** Привязанный TON-кошелек для пополнения/вывода. */
+  tonWalletAddress?: string
   /** Основной liveops-прогресс: daily/quests/pass/events/achievements. */
   liveOpsState?: LiveOpsState
   /** Активный титул из системы достижений (показывается рядом с ником). */
@@ -131,7 +134,7 @@ async function writeDb(db: PlayerDb) {
 }
 
 export function isValidPlayerId(id: string) {
-  return id.startsWith("vk_") && id.length > 3
+  return isServerPlayerId(id)
 }
 
 export async function loadPlayer(userId: PlayerId): Promise<StoredPlayer | null> {

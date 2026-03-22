@@ -95,9 +95,6 @@ importers:
       '@vercel/analytics':
         specifier: 1.6.1
         version: 1.6.1(next@16.1.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
-      '@vkontakte/vk-bridge':
-        specifier: ^2.15.11
-        version: 2.15.11
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.24(postcss@8.5.6)
@@ -1559,9 +1556,6 @@ packages:
 
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
-
-  '@vkontakte/vk-bridge@2.15.11':
-    resolution: {integrity: sha512-gFkjqePxV+rBltgxtddL/MMgruG6iGeHr2s1gSTgxKQx7pks5QoafswcQ4kaz1E3AAkC0h/xbyHQApN+vobbvQ==}
 
   aria-hidden@1.2.6:
     resolution: {integrity: sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA==}
@@ -3560,8 +3554,6 @@ snapshots:
       '@vitest/pretty-format': 3.2.4
       loupe: 3.2.1
       tinyrainbow: 2.0.0
-
-  '@vkontakte/vk-bridge@2.15.11': {}
 
   aria-hidden@1.2.6:
     dependencies:

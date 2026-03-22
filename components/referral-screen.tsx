@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useGame } from "@/lib/game-context"
 import { ArrowLeft, Copy, Coins, Users, Link as LinkIcon, RefreshCw, HandCoins } from "lucide-react"
 import { formatAmount } from "@/lib/format-amount"
+import { isServerPlayerId } from "@/lib/platform-user"
 
 type ReferralStatItem = {
   id: string
@@ -49,16 +50,16 @@ async function safeCopy(text: string) {
 }
 
 export function ReferralScreen() {
-  const { setScreen, player, vkUser, setPlayer } = useGame()
+  const { setScreen, player, platformUser, setPlayer } = useGame()
   const [stats, setStats] = useState<ReferralStatsResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [claiming, setClaiming] = useState(false)
   const [copied, setCopied] = useState<"link" | "code" | null>(null)
 
   const userId = player.id
-  const canUse = vkUser != null && userId.startsWith("vk_")
+  const canUse = platformUser != null && isServerPlayerId(userId)
 
-  const referralCode = useMemo(() => (userId.startsWith("vk_") ? userId : ""), [userId])
+  const referralCode = useMemo(() => (isServerPlayerId(userId) ? userId : ""), [userId])
   const referralLink = useMemo(() => {
     if (typeof window === "undefined") return ""
     const base = `${window.location.origin}${window.location.pathname}`
@@ -143,7 +144,7 @@ export function ReferralScreen() {
       {!canUse && (
         <div className="w-full max-w-lg bg-card/50 border border-border/30 rounded-2xl p-4">
           <p className="text-sm text-muted-foreground font-medium leading-relaxed">
-            Реферальная программа доступна после входа через ВК.
+            Реферальная программа доступна после входа через Telegram.
           </p>
         </div>
       )}

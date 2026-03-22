@@ -20,7 +20,7 @@ function getRowStyle(rank: number, isPlayer: boolean) {
 }
 
 export function LeaderboardScreen() {
-  const { setScreen, leaderboard, playerRank, player, vkUser } = useGame()
+  const { setScreen, leaderboard, playerRank, player, platformUser } = useGame()
 
   const top10 = leaderboard.slice(0, 10)
 
@@ -29,7 +29,7 @@ export function LeaderboardScreen() {
       {/* Header */}
       <div className="w-full max-w-lg flex items-center mb-5">
         <button
-          onClick={() => setScreen(vkUser ? "menu" : "entry")}
+          onClick={() => setScreen(platformUser ? "menu" : "entry")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
           aria-label="Назад"
         >

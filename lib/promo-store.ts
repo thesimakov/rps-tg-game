@@ -1,7 +1,7 @@
 import { promises as fs } from "fs"
 import path from "path"
 
-export type PromoUserId = `vk_${number}` | string
+export type PromoUserId = `tg_${number}` | string
 
 export type PromoRewardKind = "rubles" | "fast_match" | "lava_card" | "water_card"
 

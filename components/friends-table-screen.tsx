@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import type { CSSProperties } from "react"
 import { useGame } from "@/lib/game-context"
 import { formatAmount } from "@/lib/format-amount"
-import { isVKEnvironment, showFriendsPicker, type VKFriend } from "@/lib/vk-bridge"
+import { isMiniAppEnvironment, showFriendsPicker, type Friend } from "@/lib/platform-bridge"
 import { ArrowLeft, Users, Crown, Plus, X, Coins, Sword } from "lucide-react"
 
 interface TableSeat {
@@ -85,8 +85,8 @@ export function FriendsTableScreen() {
 
   const handleAddFriend = async (index: number) => {
     if (index === 0) return
-    if (!isVKEnvironment()) {
-      // Вне ВК: добавляем тестового друга
+    if (!isMiniAppEnvironment()) {
+      // Вне мини-приложения: добавляем тестового друга
       setSeats((prev) => {
         const copy = [...prev]
         const num = prev.filter(Boolean).length
@@ -100,11 +100,11 @@ export function FriendsTableScreen() {
     }
     const users = await showFriendsPicker()
     if (!users || !users.length) return
-    const friend: VKFriend = users[0]
+    const friend: Friend = users[0]
     setSeats((prev) => {
       const copy = [...prev]
       copy[index] = {
-        id: `vk_${friend.id}`,
+        id: `tg_${friend.id}`,
         name: `${friend.first_name} ${friend.last_name}`.trim(),
         avatarUrl: friend.photo_200,
       }

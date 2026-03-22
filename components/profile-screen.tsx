@@ -2,10 +2,11 @@
 
 import { useGame } from "@/lib/game-context"
 import { formatAmount } from "@/lib/format-amount"
-import { ArrowLeft, Coins, Crown, Trophy, Skull, Percent, Calendar, Medal, Pencil, Check, UserMinus, LogOut, Users } from "lucide-react"
+import { ArrowLeft, Coins, Crown, Trophy, Skull, Percent, Calendar, Medal, Pencil, Check, UserMinus, LogOut, Users, Wallet, Send } from "lucide-react"
 import { useState } from "react"
 import { PlayerAvatar, VipBadgeOnFrame } from "@/components/player-avatar"
 import { LiveOpsDashboard } from "@/components/liveops-dashboard"
+import { requestWithdraw } from "@/lib/platform-bridge"
 
 const HIDE_AVATAR_PRICE = 100
 const BLOCK_BASE =
@@ -18,9 +19,13 @@ const BLOCK_SOCIAL_CLASS =
   `${BLOCK_BASE} border-blue-300/30 bg-gradient-to-br from-blue-500/14 via-card/55 to-sky-500/10`
 
 export function ProfileScreen() {
-  const { setScreen, player, setPlayer, playerRank, logoutWithVK, trackSpend, toDisplayAmount, currencyLabel } = useGame()
+  const { setScreen, player, setPlayer, playerRank, logout, trackSpend, toDisplayAmount, currencyLabel } = useGame()
   const [isEditingName, setIsEditingName] = useState(false)
   const [nameInput, setNameInput] = useState(player.name)
+  const [withdrawWallet, setWithdrawWallet] = useState(player.tonWalletAddress ?? "")
+  const [withdrawAmount, setWithdrawAmount] = useState("")
+  const [withdrawBusy, setWithdrawBusy] = useState(false)
+  const [withdrawMessage, setWithdrawMessage] = useState("")
 
   const totalGames = player.wins + player.losses
   const winRate = totalGames > 0 ? Math.round((player.wins / totalGames) * 100) : 0
@@ -40,6 +45,46 @@ export function ProfileScreen() {
     setIsEditingName(false)
   }
 
+  const submitWithdraw = async () => {
+    const amount = Math.floor(Number(withdrawAmount))
+    if (!Number.isFinite(amount) || amount < 10) {
+      setWithdrawMessage("Минимальная сумма вывода: 10 монет.")
+      return
+    }
+    if (amount > player.balance) {
+      setWithdrawMessage("Недостаточно средств для вывода.")
+      return
+    }
+    if (!withdrawWallet.trim()) {
+      setWithdrawMessage("Укажите TON-кошелек формата UQ... или EQ...")
+      return
+    }
+    setWithdrawBusy(true)
+    setWithdrawMessage("")
+    try {
+      const res = await requestWithdraw(amount, withdrawWallet.trim())
+      if (!res.ok) {
+        const msg =
+          res.error === "invalid_wallet"
+            ? "Некорректный TON-кошелек."
+            : res.error === "daily_limit"
+              ? "Превышен суточный лимит вывода."
+              : "Не удалось создать заявку на вывод."
+        setWithdrawMessage(msg)
+        return
+      }
+      setPlayer((p) => ({
+        ...p,
+        balance: typeof res.balance === "number" ? res.balance : p.balance - amount,
+        tonWalletAddress: withdrawWallet.trim(),
+      }))
+      setWithdrawAmount("")
+      setWithdrawMessage("Заявка на вывод создана. Ожидайте обработку оператором.")
+    } finally {
+      setWithdrawBusy(false)
+    }
+  }
+
   return (
     <div className="flex flex-col items-center min-h-screen px-4 py-6 pb-24">
       {/* Header */}
@@ -57,7 +102,7 @@ export function ProfileScreen() {
         <div className="w-9" />
       </div>
 
-      {/* Avatar + Name (аватар из ВК, можно отключить за 100 монет) */}
+      {/* Avatar + Name */}
       <div className="flex flex-col items-center gap-3 mb-6">
         <div className="relative">
           {player.avatarFrame === "gold" ? (
@@ -142,20 +187,20 @@ export function ProfileScreen() {
             {player.vip ? "VIP Игрок" : "Игрок"}
           </p>
         </div>
-        {/* Скрыть аватар ВК за 100 монет */}
+      {/* Скрыть внешний аватар за 100 монет */}
         {player.avatarUrl && (
           <div className="mt-2 w-full max-w-lg">
             {player.hideVkAvatar ? (
               <p className="text-center text-sm text-muted-foreground font-medium flex items-center justify-center gap-1.5">
                 <UserMinus className="h-4 w-4" />
-                Аватар ВК скрыт
+                Аватар скрыт
               </p>
             ) : (
               <button
                 type="button"
                 onClick={() => {
                   if (player.balance >= HIDE_AVATAR_PRICE) {
-                    trackSpend(HIDE_AVATAR_PRICE, "hide-vk-avatar")
+                    trackSpend(HIDE_AVATAR_PRICE, "hide-avatar")
                     setPlayer((p) => ({ ...p, balance: p.balance - HIDE_AVATAR_PRICE, hideVkAvatar: true }))
                   }
                 }}
@@ -163,7 +208,7 @@ export function ProfileScreen() {
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
               >
                 <UserMinus className="h-4 w-4" />
-                Скрыть аватар ВК ({HIDE_AVATAR_PRICE} монет)
+                Скрыть аватар ({HIDE_AVATAR_PRICE} монет)
               </button>
             )}
           </div>
@@ -347,10 +392,53 @@ export function ProfileScreen() {
         <span>Реферальная программа</span>
       </button>
 
+      <div className={`${BLOCK_ECONOMY_CLASS} mb-4`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Wallet className="h-5 w-5 text-accent" />
+          <span className="text-base font-semibold text-foreground">Вывод выигрыша (TON)</span>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          Укажите кошелек TON и сумму. Средства спишутся только после создания серверной заявки.
+        </p>
+        <input
+          type="text"
+          value={withdrawWallet}
+          onChange={(e) => {
+            setWithdrawWallet(e.target.value)
+            setWithdrawMessage("")
+          }}
+          placeholder="UQ... или EQ..."
+          className="w-full mb-2 rounded-xl bg-card/80 border border-border/50 px-3 py-2 text-sm text-foreground"
+        />
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={10}
+            value={withdrawAmount}
+            onChange={(e) => {
+              setWithdrawAmount(e.target.value)
+              setWithdrawMessage("")
+            }}
+            placeholder="Сумма"
+            className="flex-1 rounded-xl bg-card/80 border border-border/50 px-3 py-2 text-sm text-foreground"
+          />
+          <button
+            type="button"
+            onClick={() => void submitWithdraw()}
+            disabled={withdrawBusy}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-sm font-bold text-primary-foreground disabled:opacity-60"
+          >
+            <Send className="h-4 w-4" />
+            {withdrawBusy ? "..." : "Вывести"}
+          </button>
+        </div>
+        {!!withdrawMessage && <p className="mt-2 text-xs text-muted-foreground">{withdrawMessage}</p>}
+      </div>
+
       {/* Выйти — в самом низу */}
       <div className="flex-1 min-h-4" />
       <button
-        onClick={logoutWithVK}
+        onClick={logout}
         className="w-full max-w-lg flex items-center justify-center gap-2 py-4 rounded-3xl border border-slate-300/25 bg-gradient-to-br from-slate-500/14 via-card/50 to-zinc-500/10 text-muted-foreground hover:text-foreground font-medium text-base transition-colors"
       >
         <LogOut className="h-5 w-5" />

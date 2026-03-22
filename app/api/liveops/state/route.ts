@@ -1,6 +1,6 @@
 import { ensureLiveOpsState, getCurrentWeeklyEvent } from "@/lib/liveops/engine"
 import { loadLiveOpsConfig } from "@/lib/liveops/config"
-import { syncWithVkApi } from "@/lib/liveops/vk-sync"
+import { syncLiveopsPlatformState } from "@/lib/liveops/liveops-sync"
 import { IS_STATIC_EXPORT, jsonNoStore, loadPlayerForLiveOps, mapError, persistPlayer } from "@/lib/liveops/api-utils"
 
 export const dynamic = "force-static"
@@ -14,8 +14,8 @@ export async function POST(req: Request) {
     const player = await loadPlayerForLiveOps(body.userId ?? "")
     const now = Date.now()
     const { config, state } = await ensureLiveOpsState(player, now)
-    const vk = await syncWithVkApi(player)
-    player.vkVoicesBalance = vk.voicesBalance
+    const liveops = await syncLiveopsPlatformState(player)
+    player.vkVoicesBalance = liveops.voicesBalance
     player.liveOpsState = state
     const saved = await persistPlayer(player)
     return jsonNoStore({
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       seasonId: config.seasonId,
       config,
       weeklyEvent: getCurrentWeeklyEvent(config, now),
-      vkSync: vk,
+      liveopsSync: liveops,
       liveOpsState: saved.liveOpsState,
       activeTitleId: saved.activeTitleId,
     })

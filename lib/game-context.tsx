@@ -1,9 +1,10 @@
 "use client"
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
-import { initVKBridge, getVKUser, getBridgeReady, type VKUser } from "@/lib/vk-bridge"
+import { initPlatformBridge, getPlatformUser, getBridgeReady, type PlatformUser } from "@/lib/platform-bridge"
 import type { LiveOpsState } from "@/lib/liveops/types"
 import { clampLevelXp, getRankBoostExtra } from "@/lib/level-system"
+import { isServerPlayerId } from "@/lib/platform-user"
 
 export type Move = "rock" | "scissors" | "paper" | "water" | "fire"
 export type WeeklyMode = "elements_tournament" | "time_is_money" | "blind_luck" | "boss_week"
@@ -58,7 +59,7 @@ export interface Player {
   hasGoldFrame?: boolean
   /** Участие в турнире дня */
   tournamentEntry?: boolean
-  /** Скрыть аватар из ВК (купили за 100 монет) */
+  /** Скрыть внешний аватар (купили за 100 монет) */
   hideVkAvatar?: boolean
   /** Карта «Лава»: осталось использований (5 за покупку) */
   lavaCardUses?: number
@@ -74,7 +75,7 @@ export interface Player {
   invitedRewardClaimed?: boolean
   /** Награда 100 монет за пост «расскажи друзьям» уже получена */
   wallPostRewardClaimed?: boolean
-  /** Награда за подписку на группу ВК уже получена */
+  /** Награда за подписку на канал уже получена */
   groupSubscribedRewardClaimed?: boolean
   /** Время последнего получения ежедневного подарка (timestamp). Следующий доступен через 24 ч. */
   lastDailyGiftClaimedAt?: number
@@ -94,8 +95,10 @@ export interface Player {
   lottoMatchedNumbers?: number[]
   /** Приветственный бонус за первый вход уже получен */
   welcomeGiftClaimed?: boolean
-  /** Баланс голосов VK (серверная синхронизация). */
+  /** Внутренний баланс платформенной валюты. */
   vkVoicesBalance?: number
+  /** Привязанный TON-кошелек для вывода/пополнения. */
+  tonWalletAddress?: string
   /** Полный прогресс liveops (daily/quests/pass/events/achievements). */
   liveOpsState?: LiveOpsState
   /** Активный титул игрока, показывается возле ника в матчах. */
@@ -233,13 +236,13 @@ interface GameState {
   leaderboardVersion: number
   /** Покупка буста рейтинга: 250 монет → +100 к недельным очкам */
   purchaseRankBoost: () => boolean
-  vkUser: VKUser | null
-  /** Войти через ВК (VK Bridge) */
-  loginWithVK: () => Promise<void>
-  /** Войти локально без ВК (гостевой режим) */
-  loginWithoutVK: () => void
-  /** Выйти из аккаунта ВК — возврат на экран входа */
-  logoutWithVK: () => void
+  platformUser: PlatformUser | null
+  /** Войти через Telegram Mini App */
+  loginWithPlatform: () => Promise<void>
+  /** Войти локально гостем */
+  loginAsGuest: () => void
+  /** Выйти из аккаунта — возврат на экран входа */
+  logout: () => void
   isLoading: boolean
   loadingStage: string
   loadingProgress: number
@@ -409,7 +412,7 @@ export function getFillerBetEntries(count: number): BetEntry[] {
 const LEADERBOARD_UPDATE_MS = 30 * 1000
 
 /** Сохранение в localStorage: версия для совместимости при будущих обновлениях */
-const SAVE_STORAGE_KEY = "rps_vk_save"
+const SAVE_STORAGE_KEY = "rps_save"
 const SAVE_VERSION = 2
 const BRIDGE_INIT_TIMEOUT_MS = 6000
 const AUTH_RESOLVE_TIMEOUT_MS = 7000
@@ -476,6 +479,7 @@ function toStoredPlayer(player: Player): import("./player-store").StoredPlayer {
     lottoMatchedNumbers: player.lottoMatchedNumbers,
     welcomeGiftClaimed: player.welcomeGiftClaimed,
     vkVoicesBalance: player.vkVoicesBalance,
+    tonWalletAddress: player.tonWalletAddress,
     liveOpsState: player.liveOpsState,
     activeTitleId: player.activeTitleId,
     bossChestPending: player.bossChestPending,
@@ -525,9 +529,9 @@ function loadSavedState(): {
     if (!raw) return null
     const data = JSON.parse(raw) as { version?: number; player?: Partial<Player>; lavaCardStock?: number }
     if (!data || (data.version != null && data.version > SAVE_VERSION)) return null
-    // Если сохранение относится к VK-аккаунту, не восстанавливаем прогресс из localStorage —
+    // Если сохранение относится к серверному аккаунту, не восстанавливаем прогресс из localStorage —
     // для таких игроков источником правды является сервер (API /api/player/load/save).
-    const isVkPlayer = typeof data.player?.id === "string" && data.player.id.startsWith("vk_")
+    const isVkPlayer = typeof data.player?.id === "string" && isServerPlayerId(data.player.id)
     const hasWelcomeGiftFlag = typeof data.player?.welcomeGiftClaimed === "boolean"
     let player: Player = isVkPlayer ? { ...DEFAULT_PLAYER } : { ...DEFAULT_PLAYER, ...data.player }
     player = { ...player, levelXp: deriveInitialLevelXp(player) }
@@ -599,6 +603,7 @@ function saveState(player: Player, lavaCardStock: number) {
           lottoMatchedNumbers: player.lottoMatchedNumbers,
           welcomeGiftClaimed: player.welcomeGiftClaimed,
           vkVoicesBalance: player.vkVoicesBalance,
+          tonWalletAddress: player.tonWalletAddress,
           liveOpsState: player.liveOpsState,
           activeTitleId: player.activeTitleId,
           activeWeeklyMode: player.activeWeeklyMode,
@@ -624,7 +629,7 @@ function shuffleEarnings(entries: Omit<LeaderboardEntry, "rank">[]): Omit<Leader
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [screen, setScreen] = useState<GameScreen>("entry")
-  const [vkUser, setVkUser] = useState<VKUser | null>(null)
+  const [platformUser, setPlatformUser] = useState<PlatformUser | null>(null)
   const [bridgeInitialized, setBridgeInitialized] = useState(false)
   const [authResolved, setAuthResolved] = useState(false)
   const [bridgeTimedOut, setBridgeTimedOut] = useState(false)
@@ -715,12 +720,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     saveState(player, lavaCardStock)
   }, [hasLoadedSave, player, lavaCardStock])
 
-  // Синхронизация прогресса VK-пользователя с сервером (единый прогресс на всех платформах).
+  // Синхронизация прогресса серверного пользователя с бэкендом.
   useEffect(() => {
     if (!hasLoadedSave) return
-    if (!vkUser) return
+    if (!platformUser) return
     const userId = player.id
-    if (!userId || !userId.startsWith("vk_")) return
+    if (!userId || !isServerPlayerId(userId)) return
 
     const controller = new AbortController()
     const timeout = setTimeout(() => {
@@ -731,7 +736,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(timeout)
       controller.abort()
     }
-  }, [hasLoadedSave, vkUser, player])
+  }, [hasLoadedSave, platformUser, player])
 
   // Загружаем серверные weekly-правила события.
   useEffect(() => {
@@ -751,7 +756,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [setPlayer])
 
-  // Инициализация VK Bridge
+  // Инициализация bridge мини-приложения.
   useEffect(() => {
     let active = true
     let settled = false
@@ -762,7 +767,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setBridgeInitialized(true)
     }, BRIDGE_INIT_TIMEOUT_MS)
 
-    void initVKBridge().finally(() => {
+    void initPlatformBridge().finally(() => {
       if (!active || settled) return
       settled = true
       clearTimeout(timeout)
@@ -777,21 +782,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const trackSpend = useCallback(
     (amount: number, reason: string) => {
-      if (!vkUser) return
+      if (!platformUser) return
       const userId = player.id
-      if (!userId || !userId.startsWith("vk_")) return
+      if (!userId || !isServerPlayerId(userId)) return
       if (!Number.isFinite(amount) || amount <= 0) return
       void postJSON("/api/referrals/spend", { userId, amount: Math.floor(amount), reason })
     },
-    [player.id, vkUser]
+    [player.id, platformUser]
   )
 
-  const hydrateVkPlayer = useCallback(async (user: VKUser) => {
-    const vkId = `vk_${user.id}`
-    setVkUser(user)
+  const hydratePlatformPlayer = useCallback(async (user: PlatformUser) => {
+    const platformId = `tg_${user.id}`
+    setPlatformUser(user)
     setPlayer((p) => ({
       ...p,
-      id: vkId,
+      id: platformId,
       name: user.first_name,
       avatar: user.first_name.charAt(0).toUpperCase(),
       avatarUrl: user.photo_200 || user.photo_100 || "",
@@ -800,12 +805,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     if (typeof window !== "undefined") {
       try {
-        window.localStorage.setItem("rps_vk_user_id", vkId)
+        window.localStorage.setItem("rps_user_id", platformId)
       } catch {
         // ignore
       }
       try {
-        window.dispatchEvent(new Event("rps_vk_login_success"))
+        window.dispatchEvent(new Event("rps_login_success"))
       } catch {
         // ignore
       }
@@ -813,7 +818,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     const res = await postJSON<{ ok: boolean; exists?: boolean; player?: import("./player-store").StoredPlayer; error?: string; banUntil?: number }>(
       "/api/player/load",
-      { userId: vkId }
+      { userId: platformId }
     )
     if (!res) return
     if (!res.ok) {
@@ -840,7 +845,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     void postJSON("/api/player/save", {
       player: toStoredPlayer({
         ...DEFAULT_PLAYER,
-        id: vkId,
+        id: platformId,
         name: user.first_name,
         avatar: user.first_name.charAt(0).toUpperCase(),
         avatarUrl: user.photo_200 || user.photo_100 || "",
@@ -848,11 +853,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  // Реферальная привязка: если открыли ссылку с ?ref=vk_123 — привязать реферера один раз.
+  // Реферальная привязка: если открыли ссылку с ?ref=tg_123 — привязать реферера один раз.
   useEffect(() => {
-    if (!vkUser) return
+    if (!platformUser) return
     const userId = player.id
-    if (!userId || !userId.startsWith("vk_")) return
+    if (!userId || !isServerPlayerId(userId)) return
     if (typeof window === "undefined") return
 
     const key = `rps_ref_applied_${userId}`
@@ -860,10 +865,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const ref = params.get("ref")
     const pendingCode = (window.localStorage.getItem("rps_pending_ref_code") ?? "").trim()
 
-    const referrerIdFromCode =
-      pendingCode && pendingCode.startsWith("vk_") && pendingCode !== userId ? pendingCode : ""
+    const referrerIdFromCode = pendingCode && isServerPlayerId(pendingCode) && pendingCode !== userId ? pendingCode : ""
 
-    const validRefFromUrl = ref && ref.startsWith("vk_") && ref !== userId ? ref : ""
+    const validRefFromUrl = ref && isServerPlayerId(ref) && ref !== userId ? ref : ""
 
     // Если уже помечали applied, но есть "pending code" — всё равно пробуем (на случай, когда пользователь
     // сначала заходил без кода, а потом ввёл код на экране входа).
@@ -888,18 +892,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       .finally(() => {
         void postJSON("/api/referrals/upsert", { userId })
       })
-  }, [player.id, vkUser])
+  }, [player.id, platformUser])
 
-  const loginWithVKBridge = useCallback(async () => {
-    const user = await getVKUser()
+  const loginWithBridge = useCallback(async () => {
+    const user = await getPlatformUser()
     if (!user) return
-    await hydrateVkPlayer(user)
+    await hydratePlatformPlayer(user)
     setScreen("menu")
-  }, [hydrateVkPlayer])
+  }, [hydratePlatformPlayer])
 
   useEffect(() => {
     if (!bridgeInitialized) return
-    if (vkUser) {
+    if (platformUser) {
       setAuthResolved(true)
       return
     }
@@ -916,7 +920,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setAuthTimedOut(true)
       setAuthResolved(true)
     }, AUTH_RESOLVE_TIMEOUT_MS)
-    void loginWithVKBridge().finally(() => {
+    void loginWithBridge().finally(() => {
       if (!active || settled) return
       settled = true
       clearTimeout(authFallbackTimer)
@@ -926,28 +930,28 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(authFallbackTimer)
       active = false
     }
-  }, [bridgeInitialized, vkUser, loginWithVKBridge])
+  }, [bridgeInitialized, platformUser, loginWithBridge])
 
   const isLoading = !hasLoadedSave || !bridgeInitialized || !authResolved
   const loadingStage =
     bridgeTimedOut || authTimedOut
-      ? "VK недоступен, запускаем в безопасном режиме..."
+      ? "Мини-приложение недоступно, запускаем в безопасном режиме..."
       : !hasLoadedSave
         ? "Загрузка сохранений..."
         : !bridgeInitialized
-          ? "Инициализация VK Bridge..."
+          ? "Инициализация платформы..."
           : !authResolved
-            ? "Авторизация в VK..."
+            ? "Авторизация..."
             : "Запуск игры..."
   const loadingProgress = !hasLoadedSave ? 25 : !bridgeInitialized ? 50 : !authResolved ? 75 : 100
 
-  const loginWithVK = useCallback(async () => {
-    await loginWithVKBridge()
-  }, [loginWithVKBridge])
+  const loginWithPlatform = useCallback(async () => {
+    await loginWithBridge()
+  }, [loginWithBridge])
 
-  const loginWithoutVK = useCallback(() => {
+  const loginAsGuest = useCallback(() => {
     setLoginErrorMessage(null)
-    setVkUser({
+    setPlatformUser({
       id: 0,
       first_name: "Гость",
       last_name: "",
@@ -956,7 +960,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     })
     setPlayer((p) => ({
       ...p,
-      id: p.id && !p.id.startsWith("vk_") ? p.id : "guest_player",
+      id: p.id && !isServerPlayerId(p.id) ? p.id : "guest_player",
       name: p.name || "Гость",
       avatar: (p.name || "Гость").charAt(0).toUpperCase(),
       avatarUrl: "",
@@ -964,15 +968,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setScreen("menu")
   }, [])
 
-  const logoutWithVK = useCallback(() => {
+  const logout = useCallback(() => {
     if (typeof window !== "undefined") {
       try {
-        window.localStorage.removeItem("rps_vk_user_id")
+        window.localStorage.removeItem("rps_user_id")
       } catch {
         // ignore
       }
     }
-    setVkUser(null)
+    setPlatformUser(null)
     setLoginErrorMessage(null)
     setPlayer((p) => ({ ...p, id: "player1", name: "Игрок", avatar: "И", avatarUrl: "" }))
     setScreen("entry")
@@ -1340,10 +1344,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         rankTrend,
         leaderboardVersion,
         purchaseRankBoost,
-        vkUser,
-        loginWithVK,
-        loginWithoutVK,
-        logoutWithVK,
+        platformUser,
+        loginWithPlatform,
+        loginAsGuest,
+        logout,
         isLoading,
         loadingStage,
         loadingProgress,

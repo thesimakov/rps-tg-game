@@ -20,7 +20,24 @@ import { Label } from "@/components/ui/label"
 const now = () => Date.now()
 
 export function BetsSidebar() {
-  const { bets, player, createBet, removeBet, pendingBet, setScreen, setCurrentBet, setOpponent, setTotalRounds, clearPendingBet, updatePendingBetAmount, vkUser, lavaCardStock, purchaseLavaCard, toDisplayAmount, currencyLabel } = useGame()
+  const {
+    bets,
+    player,
+    createBet,
+    removeBet,
+    pendingBet,
+    setScreen,
+    setCurrentBet,
+    setOpponent,
+    setTotalRounds,
+    clearPendingBet,
+    updatePendingBetAmount,
+    platformUser,
+    lavaCardStock,
+    purchaseLavaCard,
+    toDisplayAmount,
+    currencyLabel,
+  } = useGame()
   const [createOpen, setCreateOpen] = useState(false)
   const [lavaModalOpen, setLavaModalOpen] = useState(false)
   const [amount, setAmount] = useState("")

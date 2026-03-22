@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Coins, Timer, Zap, Heart, ChevronUp, ChevronDown, ShieldAlert } from "lucide-react"
 import { PlayerAvatar, VipBadgeOnFrame } from "@/components/player-avatar"
 import { sendMatchResult } from "@/lib/liveops/client"
+import { isServerPlayerId } from "@/lib/platform-user"
 
 const BASE_MOVES: { key: Move; label: string; icon: string; color: string }[] = [
   { key: "rock", label: "Камень", icon: "\uD83E\uDEA8", color: "border-secondary/50 shadow-secondary/10" },
@@ -208,7 +209,7 @@ export function GameArena() {
 
   const trackLiveOpsMatch = useCallback(
     (won: boolean, movesUsed: Move[]) => {
-      if (!player.id.startsWith("vk_")) return
+      if (!isServerPlayerId(player.id)) return
       void sendMatchResult(player.id, {
         type: "match_finished",
         won,

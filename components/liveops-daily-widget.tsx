@@ -4,6 +4,7 @@ import { claimDaily, getLiveOpsState, restoreStreak } from "@/lib/liveops/client
 import { useGame } from "@/lib/game-context"
 import { Gift, Flame, Coins } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
+import { isServerPlayerId } from "@/lib/platform-user"
 
 interface DailyStateDto {
   streak: number
@@ -15,7 +16,7 @@ interface LiveOpsStateResponse {
   liveOpsState?: {
     daily?: DailyStateDto
   }
-  vkSync?: {
+  liveopsSync?: {
     voicesBalance: number
   }
 }
@@ -53,16 +54,16 @@ export function LiveOpsDailyWidget() {
   }, [])
 
   useEffect(() => {
-    if (!player.id.startsWith("vk_")) return
+    if (!isServerPlayerId(player.id)) return
     let cancelled = false
     void getLiveOpsState(player.id)
       .then((res) => {
         const data = res as LiveOpsStateResponse
         if (cancelled || !data?.ok) return
         if (data.liveOpsState?.daily) setState(data.liveOpsState.daily)
-        if (typeof data.vkSync?.voicesBalance === "number") {
-          setVoices(data.vkSync.voicesBalance)
-          setPlayer((p) => ({ ...p, vkVoicesBalance: data.vkSync!.voicesBalance }))
+        if (typeof data.liveopsSync?.voicesBalance === "number") {
+          setVoices(data.liveopsSync.voicesBalance)
+          setPlayer((p) => ({ ...p, vkVoicesBalance: data.liveopsSync!.voicesBalance }))
         }
       })
       .catch(() => {})

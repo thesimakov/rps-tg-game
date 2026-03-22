@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useGame } from "@/lib/game-context"
 import type { StoredPlayer } from "@/lib/player-store"
 import { ShieldAlert, ShieldCheck, RefreshCcw, Search } from "lucide-react"
+import { AdminPaymentsPanel } from "@/components/admin-payments-panel"
 
 interface AdminPlayer extends StoredPlayer {}
 
@@ -259,6 +260,8 @@ export function AdminScreen() {
             </table>
           </div>
         </div>
+
+        <AdminPaymentsPanel />
       </div>
     </div>
   )
