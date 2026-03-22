@@ -42,6 +42,10 @@ export const en = {
   entryLeaders: "Leaders",
   entryBets: "Bets",
   entryGuest: "Continue as guest",
+  entryLanguage: "Language",
+  entryLangEnglish: "English",
+  entryLangRussian: "Russian",
+  entryLangAuto: "Use Telegram / browser default",
 
   loaderArena: "LOADING ARENA",
   loaderLogoAlt: "Game logo",

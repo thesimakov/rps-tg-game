@@ -7,7 +7,7 @@ import { isServerPlayerId } from "@/lib/platform-user"
 import { useI18n } from "@/lib/i18n/context"
 
 export function EntryScreen() {
-  const { t } = useI18n()
+  const { t, locale, setLocalePreference, clearLocalePreference, isLocaleOverridden } = useI18n()
   const { setScreen, loginWithPlatform, loginAsGuest, loginErrorMessage } = useGame()
   const [showInviteCode, setShowInviteCode] = useState(false)
   const [inviteCode, setInviteCode] = useState("")
@@ -59,6 +59,45 @@ export function EntryScreen() {
             />
           </div>
           <p className="text-white/70 text-sm">{t("entryTagline")}</p>
+        </div>
+
+        <div className="w-full max-w-sm">
+          <p className="text-center text-[11px] font-semibold uppercase tracking-wide text-white/45 mb-2">
+            {t("entryLanguage")}
+          </p>
+          <div className="flex rounded-2xl border border-white/15 bg-white/[0.04] p-1 gap-1">
+            <button
+              type="button"
+              onClick={() => setLocalePreference("en")}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                locale === "en"
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                  : "text-white/75 hover:bg-white/10"
+              }`}
+            >
+              {t("entryLangEnglish")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocalePreference("ru")}
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                locale === "ru"
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                  : "text-white/75 hover:bg-white/10"
+              }`}
+            >
+              {t("entryLangRussian")}
+            </button>
+          </div>
+          {isLocaleOverridden && (
+            <button
+              type="button"
+              onClick={() => clearLocalePreference()}
+              className="mt-2 w-full text-center text-[11px] text-white/45 hover:text-white/70 underline-offset-2 hover:underline"
+            >
+              {t("entryLangAuto")}
+            </button>
+          )}
         </div>
 
         <div className="w-full flex flex-col gap-4">

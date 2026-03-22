@@ -1,8 +1,14 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react"
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import type { AppLocale } from "./types"
-import { getClientAppLocale, readTelegramLanguageCode, resolveAppLocale } from "./detect"
+import {
+  getAutoDetectedLocale,
+  getClientAppLocale,
+  readSavedLocale,
+  writeSavedLocale,
+  clearSavedLocale,
+} from "./detect"
 import { en, type MsgKey } from "./copy-en"
 import { ru } from "./copy-ru"
 
@@ -20,17 +26,35 @@ export type Translate = (key: MsgKey, vars?: Record<string, string | number>) =>
 type I18nContextValue = {
   locale: AppLocale
   t: Translate
+  /** Persist choice and apply immediately. */
+  setLocalePreference: (locale: AppLocale) => void
+  /** Remove saved choice; follow Telegram / browser again. */
+  clearLocalePreference: () => void
+  /** True if UI locale comes from saved preference, not auto-detect. */
+  isLocaleOverridden: boolean
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocale] = useState<AppLocale>(() => getClientAppLocale())
+  const [overridden, setOverridden] = useState(() => readSavedLocale() !== null)
 
   useEffect(() => {
-    const fromTg = readTelegramLanguageCode()
-    const next = resolveAppLocale(fromTg ?? (typeof navigator !== "undefined" ? navigator.language : undefined))
+    setLocale(getClientAppLocale())
+    setOverridden(readSavedLocale() !== null)
+  }, [])
+
+  const setLocalePreference = useCallback((next: AppLocale) => {
+    writeSavedLocale(next)
     setLocale(next)
+    setOverridden(true)
+  }, [])
+
+  const clearLocalePreference = useCallback(() => {
+    clearSavedLocale()
+    setLocale(getAutoDetectedLocale())
+    setOverridden(false)
   }, [])
 
   useEffect(() => {
@@ -43,8 +67,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     return {
       locale,
       t: (key, vars) => interpolate(table[key], vars),
+      setLocalePreference,
+      clearLocalePreference,
+      isLocaleOverridden: overridden,
     }
-  }, [locale])
+  }, [locale, overridden, setLocalePreference, clearLocalePreference])
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }

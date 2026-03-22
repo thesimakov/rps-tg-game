@@ -45,6 +45,10 @@ export const ru = {
   entryLeaders: "Лидеры",
   entryBets: "Ставки",
   entryGuest: "Войти как гость",
+  entryLanguage: "Язык",
+  entryLangEnglish: "English",
+  entryLangRussian: "Русский",
+  entryLangAuto: "Как в Telegram или браузере",
 
   loaderArena: "ЗАГРУЗКА АРЕНЫ",
   loaderLogoAlt: "Логотип игры",
