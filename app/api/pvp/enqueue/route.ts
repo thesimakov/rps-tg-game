@@ -5,8 +5,6 @@ import { pvpDequeueOrEnqueue, pvpCreateMatch, pvpPrependQueue, pvpPoll } from "@
 import type { PvpTotalRounds } from "@/lib/pvp/types"
 import { IS_STATIC_EXPORT } from "@/lib/liveops/api-utils"
 
-export const dynamic = "force-dynamic"
-
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } })
 }

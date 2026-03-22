@@ -4,8 +4,6 @@ import { isPvpClassicMove } from "@/lib/pvp/moves"
 import { pvpSubmitMove, pvpPoll } from "@/lib/pvp/memory-store"
 import { IS_STATIC_EXPORT } from "@/lib/liveops/api-utils"
 
-export const dynamic = "force-dynamic"
-
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status, headers: { "Cache-Control": "no-store" } })
 }
