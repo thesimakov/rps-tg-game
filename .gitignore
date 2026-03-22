@@ -4,5 +4,6 @@ out
 data/referrals.json
 .pnpm-store
 .env
+.ssh_deploy_key
 .DS_Store
 *.tsbuildinfo
