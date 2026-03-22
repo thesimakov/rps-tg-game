@@ -1,4 +1,5 @@
-name: Deploy to VPS (play.lemnity.ru)
+# Продакшен для Telegram: https://tg.lemnity.ru/ (после push в main + секреты VPS_*).
+name: Deploy to VPS
 
 on:
   push:
