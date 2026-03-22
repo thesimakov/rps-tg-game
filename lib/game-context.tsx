@@ -2,6 +2,10 @@
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
 import { initPlatformBridge, getPlatformUser, getBridgeReady, type PlatformUser } from "@/lib/platform-bridge"
+import { useI18n } from "@/lib/i18n/context"
+import { getClientAppLocale } from "@/lib/i18n/detect"
+import type { AppLocale } from "@/lib/i18n/types"
+import { getBotProfiles } from "@/lib/i18n/bots"
 import type { LiveOpsState } from "@/lib/liveops/types"
 import { clampLevelXp, getRankBoostExtra } from "@/lib/level-system"
 import { isServerPlayerId } from "@/lib/platform-user"
@@ -272,67 +276,16 @@ interface GameState {
   /** Подпись валюты (например, "монет") */
   currencyLabel: string
   weeklyRules: WeeklyRules | null
+  /** Роботы для ставок и матчмейкинга (имена на языке клиента) */
+  opponents: Player[]
 }
 
 const GameContext = createContext<GameState | null>(null)
 
-/** 50 ботов для матчей, ставок и рейтинга: русские имена + имена стран СНГ */
-const BOT_NAMES: { name: string; avatar: string; vip: boolean }[] = [
-  { name: "Алексей", avatar: "А", vip: false },
-  { name: "Мария", avatar: "М", vip: true },
-  { name: "Дмитрий", avatar: "Д", vip: false },
-  { name: "Оксана", avatar: "О", vip: true },
-  { name: "Никита", avatar: "Н", vip: false },
-  { name: "Ольга", avatar: "О", vip: true },
-  { name: "Сергей", avatar: "С", vip: false },
-  { name: "Анна", avatar: "А", vip: false },
-  { name: "Тарас", avatar: "Т", vip: false },
-  { name: "Елена", avatar: "Е", vip: false },
-  { name: "Нурлан", avatar: "Н", vip: false },
-  { name: "Татьяна", avatar: "Т", vip: true },
-  { name: "Асель", avatar: "А", vip: false },
-  { name: "Наталья", avatar: "Н", vip: false },
-  { name: "Михаил", avatar: "М", vip: false },
-  { name: "Юлия", avatar: "Ю", vip: true },
-  { name: "Ерлан", avatar: "Е", vip: false },
-  { name: "Светлана", avatar: "С", vip: false },
-  { name: "Александр", avatar: "А", vip: true },
-  { name: "Динара", avatar: "Д", vip: true },
-  { name: "Роман", avatar: "Р", vip: false },
-  { name: "Виктория", avatar: "В", vip: false },
-  { name: "Артём", avatar: "А", vip: false },
-  { name: "Нигора", avatar: "Н", vip: false },
-  { name: "Максим", avatar: "М", vip: true },
-  { name: "Рустам", avatar: "Р", vip: false },
-  { name: "Кирилл", avatar: "К", vip: false },
-  { name: "Алина", avatar: "А", vip: false },
-  { name: "Армен", avatar: "А", vip: false },
-  { name: "Валерия", avatar: "В", vip: true },
-  { name: "Егор", avatar: "Е", vip: false },
-  { name: "Лусине", avatar: "Л", vip: false },
-  { name: "Даниил", avatar: "Д", vip: false },
-  { name: "Марина", avatar: "М", vip: false },
-  { name: "Георгий", avatar: "Г", vip: false },
-  { name: "София", avatar: "С", vip: true },
-  { name: "Николай", avatar: "Н", vip: false },
-  { name: "Нино", avatar: "Н", vip: false },
-  { name: "Станислав", avatar: "С", vip: false },
-  { name: "Эльдар", avatar: "Э", vip: false },
-  { name: "Глеб", avatar: "Г", vip: false },
-  { name: "Севиль", avatar: "С", vip: false },
-  { name: "Фёдор", avatar: "Ф", vip: false },
-  { name: "Олеся", avatar: "О", vip: false },
-  { name: "Лев", avatar: "Л", vip: true },
-  { name: "Янина", avatar: "Я", vip: false },
-  { name: "Захар", avatar: "З", vip: false },
-  { name: "Айдай", avatar: "А", vip: false },
-  { name: "Богдан", avatar: "Б", vip: false },
-  { name: "Регина", avatar: "Р", vip: false },
-]
-
 /** Детерминированные значения по индексу (без Math.random/Date.now), чтобы SSR и клиент совпадали при гидратации */
-function buildBots(): Player[] {
-  return BOT_NAMES.map((b, i) => {
+function buildBotsForLocale(locale: AppLocale): Player[] {
+  const profiles = getBotProfiles(locale)
+  return profiles.map((b, i) => {
     const id = `bot-${i}`
     const wins = 10 + (i * 17) % 90
     return {
@@ -379,21 +332,17 @@ function buildMockBetsFromBots(bots: Player[]): BetEntry[] {
   }))
 }
 
-const OPPONENTS = buildBots()
-const STATIC_LEADERBOARD = buildLeaderboardFromBots(OPPONENTS)
-const MOCK_BETS = buildMockBetsFromBots(OPPONENTS)
-
 /** В блоке ставок всегда показывать минимум столько слотов; недостающее заполнять роботами */
 export const MIN_BETS_DISPLAY = 10
 
 const BET_AMOUNTS = [25, 50, 100, 150, 200]
 
 /** Генерирует доп. ставки роботов для отображения (только для списка, не в state). */
-export function getFillerBetEntries(count: number): BetEntry[] {
-  if (count <= 0) return []
+export function getFillerBetEntries(count: number, bots: Player[]): BetEntry[] {
+  if (count <= 0 || bots.length === 0) return []
   const base = Date.now()
   return Array.from({ length: count }, (_, i) => {
-    const bot = OPPONENTS[i % OPPONENTS.length]
+    const bot = bots[i % bots.length]
     return {
       id: `filler-${i}-${bot.id}`,
       creatorId: bot.id,
@@ -490,8 +439,8 @@ function toStoredPlayer(player: Player): import("./player-store").StoredPlayer {
 
 const DEFAULT_PLAYER: Player = {
   id: "player1",
-  name: "Игрок",
-  avatar: "И",
+  name: "Player",
+  avatar: "P",
   avatarUrl: "",
   balance: 0,
   wins: 0,
@@ -628,6 +577,9 @@ function shuffleEarnings(entries: Omit<LeaderboardEntry, "rank">[]): Omit<Leader
 }
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
+  const { t, locale } = useI18n()
+  const opponents = useMemo(() => buildBotsForLocale(locale), [locale])
+
   const [screen, setScreen] = useState<GameScreen>("entry")
   const [platformUser, setPlatformUser] = useState<PlatformUser | null>(null)
   const [bridgeInitialized, setBridgeInitialized] = useState(false)
@@ -639,7 +591,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [opponent, setOpponent] = useState<Player | null>(null)
   const [currentBet, setCurrentBet] = useState(5)
   const [lastResult, setLastResult] = useState<MatchResult | null>(null)
-  const [bets, setBets] = useState<BetEntry[]>(MOCK_BETS)
+  const [bets, setBets] = useState<BetEntry[]>(() => buildMockBetsFromBots(buildBotsForLocale(getClientAppLocale())))
   const [pendingBet, setPendingBet] = useState<PendingBet | null>(null)
   const [betResponse, setBetResponse] = useState<BetResponse | null>(null)
   const [leaderboardVersion, setLeaderboardVersion] = useState(0)
@@ -647,9 +599,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [lavaCardStock, setLavaCardStock] = useState(3)
   const [weeklyRules, setWeeklyRules] = useState<WeeklyRules | null>(null)
   const [hasLoadedSave, setHasLoadedSave] = useState(false)
-  const leaderboardDataRef = useRef(
-    STATIC_LEADERBOARD.map((e) => ({ ...e }))
-  )
+  const leaderboardDataRef = useRef(buildLeaderboardFromBots(buildBotsForLocale(getClientAppLocale())).map((e) => ({ ...e })))
+
+  useEffect(() => {
+    leaderboardDataRef.current = buildLeaderboardFromBots(opponents).map((e) => ({ ...e }))
+    setBets(buildMockBetsFromBots(opponents))
+  }, [opponents])
+
   const betResponseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** Таймер: через 1 мин без принятия ставки робот подхватывает, если сумма ≤ 100 */
   const botAutoAcceptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -678,7 +634,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         let next = prev.filter((b) => !b.botExpiresAt || b.botExpiresAt > now)
         if (now - lastBotBetAddedRef.current >= 8000 + Math.random() * 10000) {
           lastBotBetAddedRef.current = now
-          const r = OPPONENTS[Math.floor(Math.random() * OPPONENTS.length)]
+          const r = opponents[Math.floor(Math.random() * opponents.length)]
           const amounts = [25, 50, 100, 150, 200]
           const newBet: BetEntry = {
             id: `bet-bot-${now}-${Math.floor(Math.random() * 1000)}`,
@@ -698,7 +654,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [])
+  }, [opponents])
 
   useEffect(() => {
     screenRef.current = screen
@@ -823,13 +779,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!res) return
     if (!res.ok) {
       if (res.error === "blocked") {
-        setLoginErrorMessage("Ваш аккаунт удалён из игры. Обратитесь к поддержке, если считаете это ошибкой.")
+        setLoginErrorMessage(t("loginErrorBlocked"))
       } else if (res.error === "banned") {
         const until = res.banUntil ? new Date(res.banUntil) : null
         const formatted = until
-          ? ` до ${until.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+          ? until.toLocaleString(locale === "ru" ? "ru-RU" : "en-US", {
+              day: "2-digit",
+              month: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
           : ""
-        setLoginErrorMessage(`Ваш аккаунт временно заблокирован на сутки${formatted}. Попробуйте зайти позже.`)
+        setLoginErrorMessage(
+          t("loginErrorBannedPrefix") + (formatted ? t("loginErrorBannedUntil", { date: formatted }) : "") + t("loginErrorBannedSuffix")
+        )
       }
       return
     }
@@ -851,7 +814,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         avatarUrl: user.photo_200 || user.photo_100 || "",
       }),
     })
-  }, [])
+  }, [locale, t])
 
   // Реферальная привязка: если открыли ссылку с ?ref=tg_123 — привязать реферера один раз.
   useEffect(() => {
@@ -935,14 +898,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const isLoading = !hasLoadedSave || !bridgeInitialized || !authResolved
   const loadingStage =
     bridgeTimedOut || authTimedOut
-      ? "Мини-приложение недоступно, запускаем в безопасном режиме..."
+      ? t("loadingMiniappFallback")
       : !hasLoadedSave
-        ? "Загрузка сохранений..."
+        ? t("loadingSaves")
         : !bridgeInitialized
-          ? "Инициализация платформы..."
+          ? t("loadingPlatform")
           : !authResolved
-            ? "Авторизация..."
-            : "Запуск игры..."
+            ? t("loadingAuth")
+            : t("loaderLaunching")
   const loadingProgress = !hasLoadedSave ? 25 : !bridgeInitialized ? 50 : !authResolved ? 75 : 100
 
   const loginWithPlatform = useCallback(async () => {
@@ -950,10 +913,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [loginWithBridge])
 
   const loginAsGuest = useCallback(() => {
+    const gn = t("guestName")
     setLoginErrorMessage(null)
     setPlatformUser({
       id: 0,
-      first_name: "Гость",
+      first_name: gn,
       last_name: "",
       photo_100: "",
       photo_200: "",
@@ -961,12 +925,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setPlayer((p) => ({
       ...p,
       id: p.id && !isServerPlayerId(p.id) ? p.id : "guest_player",
-      name: p.name || "Гость",
-      avatar: (p.name || "Гость").charAt(0).toUpperCase(),
+      name: p.name || gn,
+      avatar: (p.name || gn).charAt(0).toUpperCase(),
       avatarUrl: "",
     }))
     setScreen("menu")
-  }, [])
+  }, [t])
 
   const logout = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -978,14 +942,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
     setPlatformUser(null)
     setLoginErrorMessage(null)
-    setPlayer((p) => ({ ...p, id: "player1", name: "Игрок", avatar: "И", avatarUrl: "" }))
+    const pn = t("playerDefaultName")
+    setPlayer((p) => ({ ...p, id: "player1", name: pn, avatar: pn.charAt(0).toUpperCase(), avatarUrl: "" }))
     setScreen("entry")
-  }, [])
+  }, [t])
 
   const pickRandomOpponent = useCallback(() => {
-    const idx = Math.floor(Math.random() * OPPONENTS.length)
-    setOpponent(OPPONENTS[idx])
-  }, [])
+    const idx = Math.floor(Math.random() * opponents.length)
+    setOpponent(opponents[idx])
+  }, [opponents])
 
   const handleSetScreen = useCallback(
     (s: GameScreen) => {
@@ -1139,7 +1104,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         vip: player.vip,
       }
       setBets((prev) => [myBet, ...prev])
-      const r = OPPONENTS[Math.floor(Math.random() * OPPONENTS.length)]
+      const r = opponents[Math.floor(Math.random() * opponents.length)]
       const responseId = `resp-${Date.now()}`
       const hasLivePlayers = Math.random() < 0.7
       const delayMs = hasLivePlayers ? 2500 : BOT_AUTO_ACCEPT_AFTER_MS
@@ -1173,7 +1138,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             clearTimeout(betResponseTimeoutRef.current)
             betResponseTimeoutRef.current = null
           }
-          const bot = OPPONENTS[Math.floor(Math.random() * OPPONENTS.length)]
+          const bot = opponents[Math.floor(Math.random() * opponents.length)]
           setOpponent({
             ...bot,
             balance: 500,
@@ -1191,7 +1156,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       scheduleBotAutoAccept(BOT_AUTO_ACCEPT_AFTER_MS)
     },
-    [player.balance, player.id, player.name, player.avatar, player.wins, setScreen, setOpponent, setCurrentBet, setTotalRounds]
+    [player.balance, player.id, player.name, player.avatar, player.wins, opponents, setScreen, setOpponent, setCurrentBet, setTotalRounds]
   )
 
   const removeBet = useCallback((betId: string) => {
@@ -1252,7 +1217,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       botAutoAcceptTimeoutRef.current = null
     }
     setBets((prev) => prev.filter((b) => b.id !== betResponse.betId))
-    const bot = OPPONENTS.find((o) => o.id === betResponse.responderId)
+    const bot = opponents.find((o) => o.id === betResponse.responderId)
     setOpponent(
       bot
         ? { ...bot, balance: 500, weekWins: Math.floor(betResponse.responderWins / 2), weekEarnings: betResponse.amount * 5 }
@@ -1274,7 +1239,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setPendingBet(null)
     setTotalRounds(1)
     setScreen("arena")
-  }, [betResponse, setScreen, setOpponent, setCurrentBet, setTotalRounds])
+  }, [betResponse, opponents, setScreen, setOpponent, setCurrentBet, setTotalRounds])
 
   const declineBetResponse = useCallback(() => {
     if (!betResponse) return
@@ -1324,7 +1289,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [player.balance, trackSpend])
 
   const toDisplayAmount = useCallback((amount: number) => amount, [])
-  const currencyLabel = "монет"
+  const currencyLabel = t("commonCoins")
 
   return (
     <GameContext.Provider
@@ -1370,6 +1335,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         toDisplayAmount,
         currencyLabel,
         weeklyRules,
+        opponents,
       }}
     >
       {children}

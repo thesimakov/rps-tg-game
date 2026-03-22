@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Volume2, VolumeX } from "lucide-react"
+import { useI18n } from "@/lib/i18n/context"
 
 const STORAGE_KEY = "rps_bg_music"
 const VOLUME_KEY = "rps_bg_music_volume"
@@ -18,6 +19,7 @@ function clamp01(v: number) {
 }
 
 export function BackgroundMusic() {
+  const { t } = useI18n()
   const [enabled, setEnabled] = useState(DEFAULT_ENABLED)
   const [playing, setPlaying] = useState(false)
   const [ready, setReady] = useState(false)
@@ -134,7 +136,7 @@ export function BackgroundMusic() {
               setVolume(clamp01(Number(e.target.value) / 100))
             }
             className="w-24 accent-primary"
-            aria-label="Громкость музыки"
+            aria-label={t("bgMusicVolume")}
           />
         </div>
       </div>
@@ -143,8 +145,8 @@ export function BackgroundMusic() {
         type="button"
         onClick={toggle}
         className="p-2.5 rounded-full bg-card/90 border border-border/50 text-foreground shadow-lg hover:bg-card transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        aria-label={enabled && playing ? "Выключить музыку" : "Включить музыку"}
-        title={enabled && playing ? "Музыка вкл." : "Музыка выкл."}
+        aria-label={enabled && playing ? t("backgroundMusicOff") : t("backgroundMusicOn")}
+        title={enabled && playing ? t("backgroundMusicOn") : t("backgroundMusicOff")}
       >
         {enabled && playing ? (
           <Volume2 className="h-5 w-5 text-primary" />

@@ -4,26 +4,29 @@ import { useGame } from "@/lib/game-context"
 import { Gift, Coins, Star, ArrowLeft, Sparkles } from "lucide-react"
 import { formatAmount } from "@/lib/format-amount"
 import { useEffect, useMemo, useState } from "react"
+import { useI18n } from "@/lib/i18n/context"
+import { BOSS_REWARD_LABEL_KEY } from "@/lib/i18n/boss-reward-keys"
+import type { Translate } from "@/lib/i18n/context"
 
 type RevealPhase = "closed" | "opening" | "revealed"
 
-function rarityUi(rarity: "rare" | "epic" | "legendary") {
+function rarityUi(rarity: "rare" | "epic" | "legendary", t: Translate) {
   if (rarity === "legendary") {
     return {
-      label: "LEGENDARY",
+      label: t("bossRarityLegendary"),
       chestClass: "boss-chest-legendary",
       badgeClass: "bg-amber-500/20 text-amber-200 border-amber-400/50",
     }
   }
   if (rarity === "epic") {
     return {
-      label: "EPIC",
+      label: t("bossRarityEpic"),
       chestClass: "boss-chest-epic",
       badgeClass: "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-400/50",
     }
   }
   return {
-    label: "RARE",
+    label: t("bossRarityRare"),
     chestClass: "boss-chest-rare",
     badgeClass: "bg-sky-500/20 text-sky-200 border-sky-400/50",
   }
@@ -51,11 +54,17 @@ function confettiPieces(rarity: "rare" | "epic" | "legendary") {
 }
 
 export function BossRewardScreen() {
+  const { t } = useI18n()
   const { player, setPlayer, setScreen, currencyLabel, toDisplayAmount } = useGame()
   const chest = player.bossChestPending
   const [phase, setPhase] = useState<RevealPhase>("closed")
   const [openingStep, setOpeningStep] = useState(0)
-  const ui = chest ? rarityUi(chest.rarity) : null
+  const ui = chest ? rarityUi(chest.rarity, t) : null
+  const displayRewardLabel = chest
+    ? BOSS_REWARD_LABEL_KEY[chest.rewardId]
+      ? t(BOSS_REWARD_LABEL_KEY[chest.rewardId])
+      : chest.rewardLabel
+    : ""
   const confetti = useMemo(() => (chest ? confettiPieces(chest.rarity) : []), [chest])
 
   useEffect(() => {
@@ -74,13 +83,13 @@ export function BossRewardScreen() {
   if (!chest) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-4">
-        <p className="text-sm text-white/80">Сундук босса не найден.</p>
+        <p className="text-sm text-white/80">{t("bossRewardMissing")}</p>
         <button
           type="button"
           onClick={() => setScreen("menu")}
           className="mt-4 px-4 py-2 rounded-xl bg-slate-700 text-white text-sm"
         >
-          В меню
+          {t("bossRewardToMenu")}
         </button>
       </div>
     )
@@ -92,12 +101,12 @@ export function BossRewardScreen() {
         <button
           onClick={() => setScreen("result")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
-          aria-label="Назад"
+          aria-label={t("commonBack")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-center text-base font-bold text-foreground uppercase tracking-wider">
-          Сундук Босса
+          {t("bossRewardTitle")}
         </h1>
         <div className="w-9" />
       </div>
@@ -139,17 +148,17 @@ export function BossRewardScreen() {
             <div className="flex flex-col items-center">
               <Gift className="h-14 w-14 text-amber-300" />
               <span className="mt-3 text-sm font-bold text-white">
-                {phase === "closed" ? "Нажми, чтобы открыть сундук" : "Сундук открывается..."}
+                {phase === "closed" ? t("bossRewardTapChest") : t("bossRewardOpening")}
               </span>
               {phase === "opening" && (
                 <span className="mt-1 text-[11px] text-amber-200/90 boss-reveal-step">
-                  {openingStep === 0 && "Сканируем редкость..."}
-                  {openingStep === 1 && "Стабилизируем артефакт..."}
-                  {openingStep === 2 && "Материализуем награду..."}
-                  {openingStep >= 3 && "Почти готово..."}
+                  {openingStep === 0 && t("bossRevealScan")}
+                  {openingStep === 1 && t("bossRevealStabilize")}
+                  {openingStep === 2 && t("bossRevealMaterialize")}
+                  {openingStep >= 3 && t("bossRevealAlmost")}
                 </span>
               )}
-              <span className="mt-2 text-[10px] text-white/65 uppercase tracking-wide">Tap To Reveal</span>
+              <span className="mt-2 text-[10px] text-white/65 uppercase tracking-wide">{t("bossRewardTapRevealLine")}</span>
             </div>
           </button>
         ) : (
@@ -162,8 +171,8 @@ export function BossRewardScreen() {
                 {ui?.label}
               </span>
             </div>
-            <p className="text-center text-lg font-extrabold text-amber-200">Награда получена</p>
-            <p className="text-center text-sm text-white/80 mt-2">{chest.rewardLabel}</p>
+            <p className="text-center text-lg font-extrabold text-amber-200">{t("bossRewardReceived")}</p>
+            <p className="text-center text-sm text-white/80 mt-2">{displayRewardLabel}</p>
 
             <div className="mt-4 flex items-center justify-center gap-2 text-emerald-300">
               <Coins className="h-4 w-4" />
@@ -173,7 +182,7 @@ export function BossRewardScreen() {
             </div>
             <div className="mt-2 flex items-center justify-center gap-2 text-sky-300">
               <Star className="h-4 w-4" />
-              <span className="text-sm font-semibold">+{chest.rewardRating} рейтинга</span>
+              <span className="text-sm font-semibold">{t("bossRewardRating", { n: chest.rewardRating })}</span>
             </div>
 
             <button
@@ -216,7 +225,7 @@ export function BossRewardScreen() {
               }}
               className="mt-5 w-full py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold text-sm"
             >
-              Забрать награду
+              {t("bossRewardClaimBtn")}
             </button>
           </>
         )}

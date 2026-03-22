@@ -5,11 +5,13 @@ import { formatAmount } from "@/lib/format-amount"
 import { useEffect, useState } from "react"
 import { Coins, Search, X } from "lucide-react"
 import { PlayerAvatar, VipBadgeOnFrame } from "@/components/player-avatar"
+import { useI18n } from "@/lib/i18n/context"
 
 const NORMAL_SEARCH_MS = 2500
 const FAST_SEARCH_MS = 800
 
 export function Matchmaking() {
+  const { t } = useI18n()
   const { setScreen, opponent, setOpponent, currentBet, player, setPlayer, toDisplayAmount, currencyLabel, weeklyRules } = useGame()
   const [dots, setDots] = useState("")
   const [progress, setProgress] = useState(0)
@@ -21,8 +23,8 @@ export function Matchmaking() {
     if (!isBossWeek) return
     setOpponent({
       id: "boss-npc",
-      name: "Босс Эхо",
-      avatar: "Б",
+      name: t("matchmakingBossName"),
+      avatar: t("matchmakingBossAvatarLetter"),
       avatarUrl: "",
       balance: 10000,
       wins: 999,
@@ -31,7 +33,7 @@ export function Matchmaking() {
       weekEarnings: 9999,
       vip: true,
     })
-  }, [isBossWeek, setOpponent])
+  }, [isBossWeek, setOpponent, t])
 
   useEffect(() => {
     const dotInterval = setInterval(() => {
@@ -71,7 +73,7 @@ export function Matchmaking() {
         <div className="absolute -inset-4 bg-primary/6 rounded-full blur-2xl" />
       </div>
       <h2 className="text-base font-bold text-foreground mb-2">
-        {isBossWeek ? `Ищем Босса${dots}` : `Ищем соперника${dots}`}
+        {isBossWeek ? t("matchmakingSearchingBoss", { dots }) : t("matchmakingSearching", { dots })}
       </h2>
       {opponent && (
         <div className="flex items-center gap-3 mb-6 px-4 py-2 rounded-2xl bg-card/40 border border-border/30">
@@ -101,12 +103,14 @@ export function Matchmaking() {
             />
           )}
           <p className="text-base font-semibold text-foreground">
-            {isBossWeek ? `Найден: ${opponent.name} (сложный ИИ)` : `Найден: ${opponent.name}`}
+            {isBossWeek
+              ? t("matchmakingFoundBoss", { name: opponent.name })
+              : t("matchmakingFound", { name: opponent.name })}
           </p>
         </div>
       )}
       {!opponent && (
-        <p className="text-sm text-muted-foreground font-medium mb-6">Подбираем игрока...</p>
+        <p className="text-sm text-muted-foreground font-medium mb-6">{t("matchmakingSub")}</p>
       )}
       <div className="w-full max-w-xs h-2 bg-muted/30 rounded-full overflow-hidden">
         <div
@@ -119,7 +123,7 @@ export function Matchmaking() {
         className="mt-10 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive font-medium transition-colors"
       >
         <X className="h-4 w-4" />
-        Отменить
+        {t("matchmakingCancel")}
       </button>
     </div>
   )

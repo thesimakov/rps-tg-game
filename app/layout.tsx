@@ -5,8 +5,8 @@ import './globals.css'
 const rubik = Rubik({ subsets: ['latin', 'cyrillic'], weight: ['400', '500', '600', '700', '800', '900'] })
 
 export const metadata: Metadata = {
-  title: 'RPS Arena - Камень Ножницы Бумага',
-  description: 'PvP онлайн игра Камень-Ножницы-Бумага. Делай ставки и побеждай!',
+  title: 'RPS Arena — Rock Paper Scissors',
+  description: 'Online PvP Rock Paper Scissors. Place bets and win!',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -38,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ru">
+    <html lang="en">
       <body className={`${rubik.className} font-sans antialiased`}>
         {children}
       </body>

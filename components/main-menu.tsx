@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Trophy, Swords, User, ShoppingBag, Crown, Coins, Plus, Gift, Check, ListOrdered, Dice5, Shield } from "lucide-react"
 import { VipBadgeOnFrame } from "@/components/player-avatar"
 import { PlayerAvatar } from "@/components/player-avatar"
-import { LEVELS, LEVEL_STEP_XP, MAX_LEVEL, getDailyBonusPercent, getLevelMeta } from "@/lib/level-system"
+import { LEVEL_STEP_XP, MAX_LEVEL, getDailyBonusPercent, getLevelMeta } from "@/lib/level-system"
+import { useI18n } from "@/lib/i18n/context"
 
 const DAILY_REWARDS = [
   { day: 1, amount: 100, icon: "coin" as const },
@@ -29,25 +30,25 @@ function msUntilNextGift(lastClaimedAt: number | undefined): number {
   return MS_PER_DAY - elapsed
 }
 
-/** Форматирует "через X ч Y мин" */
-function formatTimeUntil(ms: number): string {
+import type { Translate } from "@/lib/i18n/context"
+
+function formatTimeUntil(ms: number, t: Translate): string {
   if (ms <= 0) return ""
   const totalMinutes = Math.ceil(ms / (60 * 1000))
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
-  if (hours > 0) return `через ${hours} ч ${minutes} мин`
-  return `через ${minutes} мин`
+  if (hours > 0) return t("mainMenuTimeInHours", { h: hours, m: minutes })
+  return t("mainMenuTimeInMinutes", { m: minutes })
 }
 
-/** Форматирует "H ч MM мин SS сек" для лото */
-function formatLottoTime(ms: number): string {
-  if (ms <= 0) return "скоро"
+function formatLottoTime(ms: number, t: Translate): string {
+  if (ms <= 0) return t("mainMenuLottoSoon")
   const totalSeconds = Math.floor(ms / 1000)
   const hours = Math.floor(totalSeconds / 3600)
   const minutes = Math.floor((totalSeconds % 3600) / 60)
   const seconds = totalSeconds % 60
   const pad = (n: number) => n.toString().padStart(2, "0")
-  return `${hours} ч ${pad(minutes)} мин ${pad(seconds)} сек`
+  return t("mainMenuLottoCountdown", { h: hours, mm: pad(minutes), ss: pad(seconds) })
 }
 
 /**
@@ -80,6 +81,7 @@ function getNextLottoDrawTimestamp(from: number = Date.now()): number {
 }
 
 export function MainMenu() {
+  const { t, locale } = useI18n()
   const { setScreen, player, setPlayer, toDisplayAmount, currencyLabel } = useGame()
   const [now, setNow] = useState(() => Date.now())
   const [showLotto, setShowLotto] = useState(false)
@@ -87,16 +89,16 @@ export function MainMenu() {
   const [showWelcomeGiftModal, setShowWelcomeGiftModal] = useState(false)
 
   const levelXp = player.levelXp ?? 0
-  const levelData = getLevelMeta(levelXp)
+  const levelData = getLevelMeta(levelXp, locale)
   const levelNumber = levelData.level
-  const progressInLevel = levelXp >= LEVELS.length * LEVEL_STEP_XP ? LEVEL_STEP_XP : levelXp % LEVEL_STEP_XP
+  const progressInLevel = levelXp >= MAX_LEVEL * LEVEL_STEP_XP ? LEVEL_STEP_XP : levelXp % LEVEL_STEP_XP
   const progressDisplay = `${Math.min(progressInLevel, LEVEL_STEP_XP)}/${LEVEL_STEP_XP}`
 
   const lastClaimedAt = player.lastDailyGiftClaimedAt
   const dailyIndex = typeof player.dailyRewardIndex === "number" ? player.dailyRewardIndex : 0
   const msUntil = useMemo(() => msUntilNextGift(lastClaimedAt), [lastClaimedAt, now])
   const canClaimGift = msUntil === 0
-  const timeUntilText = formatTimeUntil(msUntil)
+  const timeUntilText = formatTimeUntil(msUntil, t)
 
   // Автоматическое попадание в сезонный турнир после 10 уровня
   useEffect(() => {
@@ -224,7 +226,11 @@ export function MainMenu() {
             RPS Arena
           </p>
           <p className="text-sm text-white/90 font-medium">
-            Твой уровень: {levelData.name} ({Math.min(levelData.level, MAX_LEVEL)}/{MAX_LEVEL})
+            {t("mainMenuYourLevel", {
+              name: levelData.name,
+              current: Math.min(levelData.level, MAX_LEVEL),
+              max: MAX_LEVEL,
+            })}
           </p>
         </div>
         <div className="w-full max-w-[200px] mt-1.5 flex items-center gap-2">
@@ -244,7 +250,7 @@ export function MainMenu() {
           onClick={() => setScreen("levels")}
           className="mt-2 px-3 py-1.5 rounded-xl border border-cyan-300/35 bg-cyan-500/10 text-cyan-100 text-xs font-semibold hover:bg-cyan-500/20"
         >
-          Все уровни и бонусы
+          {t("mainMenuAllLevels")}
         </button>
       </div>
 
@@ -316,16 +322,16 @@ export function MainMenu() {
               setShowLotto(true)
             }}
             className="h-12 w-12 rounded-full bg-slate-900/80 border border-amber-400/60 flex items-center justify-center text-amber-400 hover:bg-slate-800 transition-colors"
-            title="Лото"
-            aria-label="Лото"
+            title={t("mainMenuLottoTitle")}
+            aria-label={t("mainMenuLottoTitle")}
           >
             <Dice5 className="h-5 w-5" />
           </button>
           <button
             onClick={() => setScreen("shop")}
             className="h-12 w-12 rounded-full bg-amber-400/30 border-2 border-amber-400/60 flex items-center justify-center text-amber-500 hover:bg-amber-400/40 transition-colors"
-            title="Пополнить баланс"
-            aria-label="Пополнить монеты"
+            title={t("mainMenuTopUpTitle")}
+            aria-label={t("mainMenuTopUpAria")}
           >
             <Plus className="h-5 w-5" />
           </button>
@@ -335,15 +341,13 @@ export function MainMenu() {
       {/* Ежедневные награды */}
       <div className="w-full max-w-lg mb-5 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 p-3 sm:p-4">
         <div className="flex items-center justify-between gap-2 mb-3">
-          <p className="text-sm text-white/95 font-medium leading-tight">
-            Играйте, делайте ставки и становись лидером
-          </p>
+          <p className="text-sm text-white/95 font-medium leading-tight">{t("mainMenuSubtitle")}</p>
           {canClaimGift ? (
             <button
               onClick={handleClaimDaily}
               className="px-4 py-2 rounded-xl bg-amber-400 text-amber-950 font-bold text-xs uppercase tracking-wide hover:bg-amber-300 transition-colors flex-shrink-0"
             >
-              Забрать
+              {t("mainMenuDailyClaim")}
             </button>
           ) : (
             <span className="text-xs text-white/80 font-medium flex-shrink-0">
@@ -374,10 +378,10 @@ export function MainMenu() {
                 ) : (
                   <Coins className="h-4 w-4 text-amber-400 mb-0.5" />
                 )}
-                <span className="text-[10px] font-bold text-white/90">{r.day} день</span>
+                <span className="text-[10px] font-bold text-white/90">{t("mainMenuDayN", { n: r.day })}</span>
                 {!claimed && (
                   <span className="text-[10px] text-white/70">
-                    {r.icon === "gift" ? "сундук" : r.amount}
+                    {r.icon === "gift" ? t("mainMenuChest") : r.amount}
                   </span>
                 )}
               </div>
@@ -393,7 +397,7 @@ export function MainMenu() {
           className="w-full flex items-center justify-center gap-3 bg-sky-500 hover:bg-sky-600 text-white font-black text-lg py-4 rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-sky-500/30"
         >
           <Swords className="h-6 w-6" />
-          <span>ИГРАТЬ</span>
+          <span>{t("mainMenuPlay")}</span>
         </button>
 
         <button
@@ -401,7 +405,7 @@ export function MainMenu() {
           className="w-full flex items-center justify-center gap-2.5 bg-slate-600/80 hover:bg-slate-600 text-white font-semibold py-3.5 rounded-2xl transition-all active:scale-[0.98] border border-slate-500/50"
         >
           <Trophy className="h-5 w-5 text-amber-400" />
-          <span>Таблица лидеров</span>
+          <span>{t("mainMenuLeaderboard")}</span>
         </button>
 
         {/* Ставки игроков — только на мобильной версии (на десктопе есть сайдбар) */}
@@ -410,7 +414,7 @@ export function MainMenu() {
           className="lg:hidden w-full flex items-center justify-center gap-2.5 bg-slate-600/80 hover:bg-slate-600 text-white font-semibold py-3.5 rounded-2xl transition-all active:scale-[0.98] border border-slate-500/50"
         >
           <ListOrdered className="h-5 w-5 text-primary" />
-          <span>Ставки игроков</span>
+          <span>{t("mainMenuPlayerBets")}</span>
         </button>
 
         <div className="flex gap-3">
@@ -419,14 +423,14 @@ export function MainMenu() {
             className="flex-1 flex items-center justify-center gap-2 bg-slate-600/80 hover:bg-slate-600 text-white font-semibold py-3.5 rounded-2xl transition-all active:scale-[0.98] border border-slate-500/50"
           >
             <ShoppingBag className="h-5 w-5 text-orange-400" />
-            <span>Магазин</span>
+            <span>{t("mainMenuShop")}</span>
           </button>
           <button
             onClick={() => setScreen("profile")}
             className="flex-1 flex items-center justify-center gap-2 bg-slate-600/80 hover:bg-slate-600 text-white font-semibold py-3.5 rounded-2xl transition-all active:scale-[0.98] border border-slate-500/50"
           >
             <User className="h-5 w-5 text-amber-400" />
-            <span>Профиль</span>
+            <span>{t("mainMenuProfileNav")}</span>
           </button>
         </div>
       </div>
@@ -439,7 +443,7 @@ export function MainMenu() {
             className="w-full flex items-center justify-center gap-2 bg-amber-400/25 border-2 border-amber-400/50 text-amber-400 font-semibold text-sm py-3.5 rounded-2xl transition-all hover:bg-amber-400/35"
           >
             <Crown className="h-5 w-5" />
-            <span>Стань ВИП и выделяйся в игре!</span>
+            <span>{t("mainMenuVipCta")}</span>
           </button>
         </div>
       )}
@@ -452,7 +456,7 @@ export function MainMenu() {
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-slate-900/80 border border-emerald-500/60 text-xs text-emerald-300 hover:bg-slate-900"
           >
             <Shield className="h-4 w-4" />
-            Панель разработчика (admin)
+            {t("mainMenuAdminDev")}
           </button>
         </div>
       )}
@@ -463,20 +467,15 @@ export function MainMenu() {
           <div className="w-full max-w-lg rounded-3xl bg-slate-900/95 border border-slate-700 shadow-2xl p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-white uppercase tracking-wide">
-                  Лото
-                </h2>
-                <p className="text-xs text-white/70 mt-0.5">
-                  Выбери 10 чисел от 1 до 50. Комбинация участвует в ближайшем розыгрыше
-                  в среду или пятницу в 00:00 по МСК.
-                </p>
+                <h2 className="text-sm font-bold text-white uppercase tracking-wide">{t("mainMenuLottoModalTitle")}</h2>
+                <p className="text-xs text-white/70 mt-0.5">{t("mainMenuLottoPick")}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowLotto(false)}
                 className="text-xs text-white/60 hover:text-white"
               >
-                Закрыть
+                {t("commonClose")}
               </button>
             </div>
 
@@ -503,11 +502,11 @@ export function MainMenu() {
             </div>
 
             <div className="flex items-center justify-between text-xs text-white/70">
-              <span>Выбрано: {tempSelection.length} / 10</span>
+              <span>{t("mainMenuLottoSelected", { current: tempSelection.length })}</span>
               {player.lottoDrawAt && (
                 <span>
-                  Розыгрыш через:{" "}
-                  {formatLottoTime(Math.max(0, player.lottoDrawAt - Date.now()))}
+                  {t("mainMenuLottoDrawIn")}{" "}
+                  {formatLottoTime(Math.max(0, player.lottoDrawAt - Date.now()), t)}
                 </span>
               )}
             </div>
@@ -522,14 +521,12 @@ export function MainMenu() {
                   : "bg-slate-700 text-slate-400 cursor-not-allowed"
               }`}
             >
-              Сохранить числа
+              {t("mainMenuLottoSave")}
             </button>
 
             {player.lottoDrawnNumbers && player.lottoDrawnNumbers.length > 0 && (
               <div className="mt-2 rounded-2xl bg-slate-900/70 border border-slate-700 p-3">
-                <p className="text-xs font-semibold text-white/80 mb-2">
-                  Выпавшие числа (отображаются 24 ч):
-                </p>
+                <p className="text-xs font-semibold text-white/80 mb-2">{t("mainMenuLottoDrawnTitle")}</p>
                 <div className="flex flex-wrap gap-1">
                   {player.lottoDrawnNumbers
                     .slice()
@@ -551,7 +548,9 @@ export function MainMenu() {
                 </div>
                 {!!player.lottoMatchedNumbers?.length && (
                   <p className="mt-2 text-xs text-emerald-300">
-                    Совпадения: {player.lottoMatchedNumbers.slice().sort((a, b) => a - b).join(", ")}
+                    {t("mainMenuLottoMatches", {
+                      numbers: player.lottoMatchedNumbers.slice().sort((a, b) => a - b).join(", "),
+                    })}
                   </p>
                 )}
                 {(player.lottoPendingPrize ?? 0) > 0 && (
@@ -569,13 +568,14 @@ export function MainMenu() {
                     }}
                     className="mt-3 w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold"
                   >
-                    Забрать приз: +{formatAmount(player.lottoPendingPrize ?? 0)} {currencyLabel}
+                    {t("mainMenuLottoClaim", {
+                      amount: formatAmount(player.lottoPendingPrize ?? 0),
+                      currency: currencyLabel,
+                    })}
                   </button>
                 )}
                 {(player.lottoPendingPrize ?? 0) === 0 && (
-                  <p className="mt-2 text-xs text-white/60">
-                    Приза в этом розыгрыше нет
-                  </p>
+                  <p className="mt-2 text-xs text-white/60">{t("mainMenuLottoNoPrize")}</p>
                 )}
               </div>
             )}
@@ -586,11 +586,11 @@ export function MainMenu() {
       {showWelcomeGiftModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/75 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-3xl bg-slate-900/95 border border-amber-400/40 shadow-2xl p-5">
-            <h2 className="text-lg font-black text-amber-300 mb-2">Добро пожаловать!</h2>
+            <h2 className="text-lg font-black text-amber-300 mb-2">{t("mainMenuWelcomeTitle")}</h2>
             <p className="text-sm text-white/85 leading-relaxed">
-              За первый вход дарим <span className="font-bold text-amber-300">{FIRST_LOGIN_GIFT} монет</span>.
+              {t("mainMenuWelcomeBody", { amount: FIRST_LOGIN_GIFT })}
             </p>
-            <p className="mt-2 text-xs text-white/60">Внутренний курс: 1 монета = 0,1 руб.</p>
+            <p className="mt-2 text-xs text-white/60">{t("mainMenuWelcomeRate")}</p>
             <button
               type="button"
               onClick={() => {
@@ -603,7 +603,7 @@ export function MainMenu() {
               }}
               className="mt-4 w-full py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-bold"
             >
-              Получить
+              {t("mainMenuWelcomeClaim")}
             </button>
           </div>
         </div>

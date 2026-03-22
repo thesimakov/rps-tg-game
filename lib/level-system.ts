@@ -1,3 +1,6 @@
+import type { AppLocale } from "@/lib/i18n/types"
+import { getLevelName, getLevelPerk } from "@/lib/i18n/level-copy"
+
 export const LEVEL_STEP_XP = 100
 export const MAX_LEVEL = 30
 export const MAX_LEVEL_XP = LEVEL_STEP_XP * MAX_LEVEL
@@ -8,38 +11,14 @@ export interface LevelMeta {
   perk: string
 }
 
-export const LEVELS: LevelMeta[] = [
-  { level: 1, name: "Новобранец", perk: "Базовый доступ к PvP-матчам." },
-  { level: 2, name: "Курсант", perk: "+5% монет к ежедневной награде." },
-  { level: 3, name: "Боец", perk: "+20 к покупке буста рейтинга." },
-  { level: 4, name: "Тактик", perk: "Скидка 3% в магазине." },
-  { level: 5, name: "Стратег", perk: "+10% монет к ежедневной награде." },
-  { level: 6, name: "Ветеран", perk: "Скидка 5% в магазине." },
-  { level: 7, name: "Чемпион", perk: "+40 к покупке буста рейтинга." },
-  { level: 8, name: "Грандмастер", perk: "+15% монет к ежедневной награде." },
-  { level: 9, name: "Элита", perk: "Скидка 8% в магазине." },
-  { level: 10, name: "Легенда", perk: "Открыт элитный уровень прогрессии." },
-  { level: 11, name: "Покоритель", perk: "+18% монет к ежедневной награде." },
-  { level: 12, name: "Гладиатор", perk: "+50 к покупке буста рейтинга." },
-  { level: 13, name: "Командор", perk: "Скидка 9% в магазине." },
-  { level: 14, name: "Титан", perk: "+20% монет к ежедневной награде." },
-  { level: 15, name: "Архонт", perk: "Скидка 10% в магазине." },
-  { level: 16, name: "Сегун", perk: "+60 к покупке буста рейтинга." },
-  { level: 17, name: "Бастион", perk: "+22% монет к ежедневной награде." },
-  { level: 18, name: "Фантом", perk: "Скидка 11% в магазине." },
-  { level: 19, name: "Зенит", perk: "+70 к покупке буста рейтинга." },
-  { level: 20, name: "Император", perk: "+24% монет к ежедневной награде." },
-  { level: 21, name: "Авангард", perk: "Скидка 12% в магазине." },
-  { level: 22, name: "Шторм", perk: "+80 к покупке буста рейтинга." },
-  { level: 23, name: "Кибермагистр", perk: "+26% монет к ежедневной награде." },
-  { level: 24, name: "Оракул", perk: "Скидка 14% в магазине." },
-  { level: 25, name: "Немезида", perk: "+90 к покупке буста рейтинга." },
-  { level: 26, name: "Доминатор", perk: "+28% монет к ежедневной награде." },
-  { level: 27, name: "Экзарх", perk: "Скидка 16% в магазине." },
-  { level: 28, name: "Сверхновая", perk: "+100 к покупке буста рейтинга." },
-  { level: 29, name: "Абсолют", perk: "+30% монет к ежедневной награде." },
-  { level: 30, name: "Миф", perk: "Финальный ранг: максимум всех бонусов." },
-]
+export function getLevelMetaForLevel(level: number, locale: AppLocale = "en"): LevelMeta {
+  const L = Math.max(1, Math.min(MAX_LEVEL, Math.floor(level)))
+  return {
+    level: L,
+    name: getLevelName(locale, L),
+    perk: getLevelPerk(locale, L),
+  }
+}
 
 export function clampLevelXp(xp: number): number {
   if (!Number.isFinite(xp)) return 0
@@ -51,9 +30,8 @@ export function getLevelFromXp(levelXp: number): number {
   return Math.min(MAX_LEVEL, Math.floor(xp / LEVEL_STEP_XP) + 1)
 }
 
-export function getLevelMeta(levelXp: number): LevelMeta {
-  const level = getLevelFromXp(levelXp)
-  return LEVELS[level - 1] ?? LEVELS[0]
+export function getLevelMeta(levelXp: number, locale: AppLocale = "en"): LevelMeta {
+  return getLevelMetaForLevel(getLevelFromXp(levelXp), locale)
 }
 
 export function getDailyBonusPercent(levelXp: number): number {

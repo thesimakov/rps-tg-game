@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import type { WithdrawRequest } from "@/lib/withdraw-store"
 import type { TonTopupRequest } from "@/lib/ton-topup-store"
 import { Download, RefreshCcw } from "lucide-react"
+import { useI18n } from "@/lib/i18n/context"
 
 const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN
 
@@ -44,6 +45,7 @@ async function downloadWithAuth(url: string, filenamePrefix: string) {
 }
 
 export function AdminPaymentsPanel() {
+  const { t } = useI18n()
   const [topups, setTopups] = useState<TonTopupRequest[]>([])
   const [withdrawals, setWithdrawals] = useState<WithdrawRequest[]>([])
   const [loading, setLoading] = useState(false)
@@ -59,7 +61,7 @@ export function AdminPaymentsPanel() {
         fetchJSON<{ ok: boolean; withdrawals?: WithdrawRequest[] }>("/api/admin/withdrawals/list"),
       ])
       if (!topupsRes?.ok || !withdrawalsRes?.ok) {
-        setError("Не удалось загрузить платежи/выплаты.")
+        setError(t("adminErrPayments"))
         return
       }
       setTopups(topupsRes.topups ?? [])
@@ -74,7 +76,7 @@ export function AdminPaymentsPanel() {
   }, [])
 
   const confirmTopup = async (item: TonTopupRequest) => {
-    const txHash = window.prompt("Введите TX hash для подтверждения платежа", item.txHash ?? "")
+    const txHash = window.prompt(t("adminPromptConfirmTx"), item.txHash ?? "")
     if (!txHash) return
     setBusyId(item.id)
     setError("")
@@ -84,14 +86,14 @@ export function AdminPaymentsPanel() {
     })
     setBusyId(null)
     if (!res?.ok) {
-      setError("Не удалось подтвердить top-up.")
+      setError(t("adminErrConfirmTopup"))
       return
     }
     await load()
   }
 
   const rejectTopup = async (item: TonTopupRequest) => {
-    const reason = window.prompt("Причина отклонения", "manual_reject") ?? "manual_reject"
+    const reason = window.prompt(t("adminPromptRejectReason"), "manual_reject") ?? "manual_reject"
     setBusyId(item.id)
     setError("")
     const res = await fetchJSON<{ ok: boolean }>("/api/admin/ton-topups/reject", {
@@ -100,7 +102,7 @@ export function AdminPaymentsPanel() {
     })
     setBusyId(null)
     if (!res?.ok) {
-      setError("Не удалось отклонить top-up.")
+      setError(t("adminErrRejectTopup"))
       return
     }
     await load()
@@ -110,10 +112,10 @@ export function AdminPaymentsPanel() {
     let txHash = ""
     let rejectReason = ""
     if (status === "paid") {
-      txHash = window.prompt("TX hash выплаты", item.txHash ?? "") ?? ""
+      txHash = window.prompt(t("adminPromptPayoutTx"), item.txHash ?? "") ?? ""
       if (!txHash.trim()) return
     } else {
-      rejectReason = window.prompt("Причина отклонения", item.rejectReason ?? "manual_reject") ?? "manual_reject"
+      rejectReason = window.prompt(t("adminPromptRejectReason"), item.rejectReason ?? "manual_reject") ?? "manual_reject"
     }
     setBusyId(item.id)
     setError("")
@@ -123,7 +125,7 @@ export function AdminPaymentsPanel() {
     })
     setBusyId(null)
     if (!res?.ok) {
-      setError("Не удалось обновить статус выплаты.")
+      setError(t("adminErrWithdrawUpdate"))
       return
     }
     await load()
@@ -132,14 +134,14 @@ export function AdminPaymentsPanel() {
   return (
     <div className="w-full flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-white/90">TON платежи и выводы</h2>
+        <h2 className="text-sm font-bold text-white/90">{t("adminPaymentsTitle")}</h2>
         <button
           type="button"
           onClick={() => void load()}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800 text-xs text-white border border-slate-600"
         >
           <RefreshCcw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          Обновить
+          {t("adminPaymentsRefresh")}
         </button>
       </div>
 
@@ -147,7 +149,7 @@ export function AdminPaymentsPanel() {
 
       <div className="rounded-2xl bg-slate-900/80 border border-slate-700 overflow-hidden">
         <div className="px-3 py-2 border-b border-slate-800/80 flex items-center justify-between">
-          <p className="text-xs font-semibold text-slate-200">TOP-UP журнал (TON)</p>
+          <p className="text-xs font-semibold text-slate-200">{t("adminTopupJournal")}</p>
           <button
             type="button"
             onClick={() => void downloadWithAuth("/api/admin/ton-topups/export", "ton-topups")}
@@ -166,32 +168,32 @@ export function AdminPaymentsPanel() {
                 <th className="px-2 py-2 text-left text-slate-300">Coins</th>
                 <th className="px-2 py-2 text-left text-slate-300">Status</th>
                 <th className="px-2 py-2 text-left text-slate-300">TX</th>
-                <th className="px-2 py-2 text-left text-slate-300">Действия</th>
+                <th className="px-2 py-2 text-left text-slate-300">{t("adminColActions")}</th>
               </tr>
             </thead>
             <tbody>
-              {topups.map((t) => (
-                <tr key={t.id} className="border-t border-slate-800/70">
-                  <td className="px-2 py-2 text-slate-300 max-w-[120px] truncate">{t.id}</td>
-                  <td className="px-2 py-2 text-slate-200 max-w-[110px] truncate">{t.userId}</td>
-                  <td className="px-2 py-2 text-slate-200">{t.coinsAmount}</td>
-                  <td className="px-2 py-2 text-slate-200">{t.status}</td>
-                  <td className="px-2 py-2 text-slate-400 max-w-[120px] truncate">{t.txHash ?? "-"}</td>
+              {topups.map((topup) => (
+                <tr key={topup.id} className="border-t border-slate-800/70">
+                  <td className="px-2 py-2 text-slate-300 max-w-[120px] truncate">{topup.id}</td>
+                  <td className="px-2 py-2 text-slate-200 max-w-[110px] truncate">{topup.userId}</td>
+                  <td className="px-2 py-2 text-slate-200">{topup.coinsAmount}</td>
+                  <td className="px-2 py-2 text-slate-200">{topup.status}</td>
+                  <td className="px-2 py-2 text-slate-400 max-w-[120px] truncate">{topup.txHash ?? "-"}</td>
                   <td className="px-2 py-2">
-                    {t.status === "pending" ? (
+                    {topup.status === "pending" ? (
                       <div className="flex gap-1">
                         <button
                           type="button"
-                          disabled={busyId === t.id}
-                          onClick={() => void confirmTopup(t)}
+                          disabled={busyId === topup.id}
+                          onClick={() => void confirmTopup(topup)}
                           className="px-2 py-1 rounded bg-emerald-600/30 border border-emerald-500/60 text-emerald-100"
                         >
                           Confirm
                         </button>
                         <button
                           type="button"
-                          disabled={busyId === t.id}
-                          onClick={() => void rejectTopup(t)}
+                          disabled={busyId === topup.id}
+                          onClick={() => void rejectTopup(topup)}
                           className="px-2 py-1 rounded bg-red-600/30 border border-red-500/60 text-red-100"
                         >
                           Reject
@@ -206,7 +208,7 @@ export function AdminPaymentsPanel() {
               {topups.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-2 py-3 text-center text-slate-400">
-                    Нет top-up записей
+                    {t("adminNoTopups")}
                   </td>
                 </tr>
               )}
@@ -217,7 +219,7 @@ export function AdminPaymentsPanel() {
 
       <div className="rounded-2xl bg-slate-900/80 border border-slate-700 overflow-hidden">
         <div className="px-3 py-2 border-b border-slate-800/80 flex items-center justify-between">
-          <p className="text-xs font-semibold text-slate-200">Выплаты (журнал)</p>
+          <p className="text-xs font-semibold text-slate-200">{t("adminWithdrawJournal")}</p>
           <button
             type="button"
             onClick={() => void downloadWithAuth("/api/admin/withdrawals/export", "withdrawals")}
@@ -237,7 +239,7 @@ export function AdminPaymentsPanel() {
                 <th className="px-2 py-2 text-left text-slate-300">Wallet</th>
                 <th className="px-2 py-2 text-left text-slate-300">Status</th>
                 <th className="px-2 py-2 text-left text-slate-300">TX hash</th>
-                <th className="px-2 py-2 text-left text-slate-300">Действия</th>
+                <th className="px-2 py-2 text-left text-slate-300">{t("adminColActions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -278,7 +280,7 @@ export function AdminPaymentsPanel() {
               {withdrawals.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-2 py-3 text-center text-slate-400">
-                    Нет заявок на вывод
+                    {t("adminNoWithdrawals")}
                   </td>
                 </tr>
               )}

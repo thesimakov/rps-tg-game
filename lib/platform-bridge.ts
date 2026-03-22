@@ -56,7 +56,7 @@ export async function getPlatformUser(): Promise<PlatformUser | null> {
   if (!u?.id) return null
   return {
     id: u.id,
-    first_name: u.first_name ?? u.username ?? "Игрок",
+    first_name: u.first_name ?? u.username ?? "Player",
     last_name: u.last_name ?? "",
     photo_100: u.photo_url ?? "",
     photo_200: u.photo_url ?? "",
@@ -178,11 +178,11 @@ export async function joinCommunity(): Promise<boolean> {
   }
 }
 
-export async function showInviteBox(): Promise<boolean> {
+export async function showInviteBox(shareText?: string): Promise<boolean> {
   if (typeof window === "undefined") return false
   const tg = getTelegramWebApp()
   if (!tg) return false
-  const text = encodeURIComponent("Заходи в RPS Arena в Telegram!")
+  const text = encodeURIComponent(shareText ?? "Join RPS Arena on Telegram!")
   const url = encodeURIComponent(window.location.href)
   const share = `https://t.me/share/url?url=${url}&text=${text}`
   try {

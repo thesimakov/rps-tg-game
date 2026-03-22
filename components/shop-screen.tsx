@@ -8,15 +8,31 @@ import { canPurchaseItem, isItemOwned, type ShopItemId } from "@/lib/shop-rules"
 import { getDiscountedPrice, getLevelFromXp, getShopDiscountPercent } from "@/lib/level-system"
 import { ArrowLeft, Crown, Zap, Sparkles, Box, Palette, Coins, Wallet, Flame, Droplets, UserPlus, Share2, X, Hourglass, Ticket } from "lucide-react"
 import { isServerPlayerId } from "@/lib/platform-user"
+import { useI18n } from "@/lib/i18n/context"
+import type { MsgKey } from "@/lib/i18n/copy-en"
 
 const INVITED_SLOTS = 4
 const INVITE_REWARD = 100
 const GROUP_SUB_REWARD = 40
 
+const SHOP_ITEM_KEYS: Record<ShopItemId, { name: MsgKey; desc: MsgKey }> = {
+  vip: { name: "shopItem_vip_name", desc: "shopItem_vip_desc" },
+  "timer-plus-10": { name: "shopItem_timer_name", desc: "shopItem_timer_desc" },
+  "card-set-ancient": { name: "shopItem_ancient_name", desc: "shopItem_ancient_desc" },
+  "fast-match": { name: "shopItem_fast_name", desc: "shopItem_fast_desc" },
+  "chest-basic": { name: "shopItem_chestBasic_name", desc: "shopItem_chestBasic_desc" },
+  "chest-premium": { name: "shopItem_chestPremium_name", desc: "shopItem_chestPremium_desc" },
+  "victory-anim": { name: "shopItem_victory_name", desc: "shopItem_victory_desc" },
+  "card-skin": { name: "shopItem_cardSkin_name", desc: "shopItem_cardSkin_desc" },
+  "frame-neon": { name: "shopItem_frameNeon_name", desc: "shopItem_frameNeon_desc" },
+  "frame-gold": { name: "shopItem_frameGold_name", desc: "shopItem_frameGold_desc" },
+  "tournament-entry": { name: "shopItem_tournament_name", desc: "shopItem_tournament_desc" },
+  "lava-card": { name: "shopItem_lava_name", desc: "shopItem_lava_desc" },
+  "water-card": { name: "shopItem_water_name", desc: "shopItem_water_desc" },
+}
+
 interface ShopItem {
-  id: string
-  name: string
-  description: string
+  id: ShopItemId
   price: number
   icon: React.ReactNode
   category: string
@@ -26,8 +42,6 @@ interface ShopItem {
 const SHOP_ITEMS: ShopItem[] = [
   {
     id: "vip",
-    name: "VIP Статус",
-    description: "Цветной ник, приоритет, статус в профиле",
     price: 50,
     icon: <Crown className="h-5 w-5" />,
     category: "premium",
@@ -35,8 +49,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "timer-plus-10",
-    name: "Таймер +10 секунд (1 день)",
-    description: "Увеличивает время выбора хода до 25 секунд на сутки.",
     price: 5,
     icon: <Hourglass className="h-5 w-5" />,
     category: "boost",
@@ -44,8 +56,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "card-set-ancient",
-    name: "Карты: Древняя Русь",
-    description: "Средневековый набор карт. Видят вы и ваши соперники.",
     price: 200,
     icon: <Palette className="h-5 w-5" />,
     category: "cosmetic",
@@ -53,8 +63,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "fast-match",
-    name: "Быстрый поиск",
-    description: "Приоритет в очереди на 10 матчей",
     price: 1,
     icon: <Zap className="h-5 w-5" />,
     category: "boost",
@@ -62,8 +70,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "chest-basic",
-    name: "Базовый сундук",
-    description: "Шанс получить бонусы или аватарку",
     price: 20,
     icon: <Box className="h-5 w-5" />,
     category: "chest",
@@ -71,8 +77,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "chest-premium",
-    name: "Премиум сундук",
-    description: "Гарантированный бонус или редкость",
     price: 50,
     icon: <Box className="h-5 w-5" />,
     category: "chest",
@@ -80,8 +84,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "victory-anim",
-    name: "Анимация: Огонь",
-    description: "Огненная анимация при победе",
     price: 15,
     icon: <Sparkles className="h-5 w-5" />,
     category: "cosmetic",
@@ -89,8 +91,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "card-skin",
-    name: "Скин: Золото",
-    description: "Золотое оформление карт",
     price: 20,
     icon: <Palette className="h-5 w-5" />,
     category: "cosmetic",
@@ -98,8 +98,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "frame-neon",
-    name: "Рамка: Неон",
-    description: "Неоновая рамка аватара",
     price: 150,
     icon: <Sparkles className="h-5 w-5" />,
     category: "cosmetic",
@@ -107,8 +105,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "frame-gold",
-    name: "Рамка: Золото",
-    description: "Золотая рамка аватара с анимацией",
     price: 150,
     icon: <Palette className="h-5 w-5" />,
     category: "cosmetic",
@@ -116,8 +112,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "tournament-entry",
-    name: "Турнир дня",
-    description: "16 игроков, призовой фонд 500+ монет",
     price: 25,
     icon: <Crown className="h-5 w-5" />,
     category: "tournament",
@@ -125,8 +119,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "lava-card",
-    name: "Карта «Лава»",
-    description: "Уничтожает любую карту соперника. 5 использований. Рекомендуем при турнире.",
     price: 120_000,
     icon: <Flame className="h-5 w-5" />,
     category: "special",
@@ -134,8 +126,6 @@ const SHOP_ITEMS: ShopItem[] = [
   },
   {
     id: "water-card",
-    name: "Карта «Вода»",
-    description: "Побеждает камень. Проигрывает бумаге. Ничья с ножницами. 3 использования.",
     price: 500,
     icon: <Droplets className="h-5 w-5" />,
     category: "special",
@@ -150,7 +140,6 @@ type PrizeKind = "coins" | "bonus" | "rubles_small" | "rubles_medium" | "boost" 
 
 interface ChestPrize {
   kind: PrizeKind
-  label: string
   amount?: number
   icon?: React.ReactNode
 }
@@ -158,22 +147,22 @@ interface ChestPrize {
 /** Случайный приз для базового сундука */
 function rollBasicPrize(): ChestPrize {
   const r = Math.random()
-  if (r < 0.28) return { kind: "coins", amount: Math.floor(Math.random() * 8) + 1, label: "монет" }
-  if (r < 0.5) return { kind: "bonus", amount: 2, label: "Бонусы +2" }
-  if (r < 0.72) return { kind: "rubles_small", amount: 3 + Math.floor(Math.random() * 5), label: "монет" }
-  if (r < 0.9) return { kind: "boost", amount: 1, label: "Быстрый поиск +1" }
-  return { kind: "double_bonus", amount: 2, label: "Бонусы +2" }
+  if (r < 0.28) return { kind: "coins", amount: Math.floor(Math.random() * 8) + 1 }
+  if (r < 0.5) return { kind: "bonus", amount: 2 }
+  if (r < 0.72) return { kind: "rubles_small", amount: 3 + Math.floor(Math.random() * 5) }
+  if (r < 0.9) return { kind: "boost", amount: 1 }
+  return { kind: "double_bonus", amount: 2 }
 }
 
 /** Случайный приз для премиум сундука */
 function rollPremiumPrize(): ChestPrize {
   const r = Math.random()
-  if (r < 0.22) return { kind: "coins", amount: 10 + Math.floor(Math.random() * 21), label: "монет" }
-  if (r < 0.4) return { kind: "bonus", amount: 2, label: "Бонусы +2" }
-  if (r < 0.58) return { kind: "rubles_medium", amount: 15 + Math.floor(Math.random() * 16), label: "монет" }
-  if (r < 0.76) return { kind: "boost", amount: Math.random() > 0.5 ? 2 : 1, label: "Быстрый поиск" }
-  if (r < 0.9) return { kind: "double_bonus", amount: 2, label: "Бонусы +2" }
-  return { kind: "coins", amount: 20 + Math.floor(Math.random() * 25), label: "монет" }
+  if (r < 0.22) return { kind: "coins", amount: 10 + Math.floor(Math.random() * 21) }
+  if (r < 0.4) return { kind: "bonus", amount: 2 }
+  if (r < 0.58) return { kind: "rubles_medium", amount: 15 + Math.floor(Math.random() * 16) }
+  if (r < 0.76) return { kind: "boost", amount: Math.random() > 0.5 ? 2 : 1 }
+  if (r < 0.9) return { kind: "double_bonus", amount: 2 }
+  return { kind: "coins", amount: 20 + Math.floor(Math.random() * 25) }
 }
 
 /** Выдать N случайных призов для сундука */
@@ -212,6 +201,7 @@ function normalizeInvitedSlots(
 }
 
 export function ShopScreen() {
+  const { t } = useI18n()
   const { setScreen, player, setPlayer, platformUser, lavaCardStock, purchaseLavaCard, purchaseWaterCard, trackSpend, toDisplayAmount, currencyLabel } = useGame()
   const [topUpLoading, setTopUpLoading] = useState<number | null>(null)
   const [buyingItemId, setBuyingItemId] = useState<string | null>(null)
@@ -242,9 +232,11 @@ export function ShopScreen() {
   const timerCooldownHours = Math.floor(timerCooldownTotalSeconds / 3600)
   const timerCooldownMinutes = Math.floor((timerCooldownTotalSeconds % 3600) / 60)
   const timerCooldownSeconds = timerCooldownTotalSeconds % 60
-  const timerCooldownText = `${timerCooldownHours} часов ${String(timerCooldownMinutes).padStart(2, "0")} минут ${String(
-    timerCooldownSeconds
-  ).padStart(2, "0")} секунд`
+  const timerCooldownText = t("shopTimerCooldown", {
+    h: timerCooldownHours,
+    mm: String(timerCooldownMinutes).padStart(2, "0"),
+    ss: String(timerCooldownSeconds).padStart(2, "0"),
+  })
   const levelXp = player.levelXp ?? 0
   const levelNumber = getLevelFromXp(levelXp)
   const shopDiscountPercent = getShopDiscountPercent(levelXp)
@@ -334,7 +326,7 @@ export function ShopScreen() {
         const usedRaw = window.localStorage.getItem(key)
         const used = Number(usedRaw) || 0
         if (used + amount > 3000) {
-          setTopUpError("Лимит пополнения 3000 монет в сутки уже достигнут или будет превышен этой покупкой.")
+          setTopUpError(t("shopTopUpLimit"))
           return
         }
       }
@@ -344,7 +336,7 @@ export function ShopScreen() {
 
     // Вне окружения мини-приложения сразу показываем подсказку и ничего не делаем.
     if (!isMiniAppEnvironment()) {
-      setTopUpError("Пополнение доступно только внутри Telegram Mini App.")
+      setTopUpError(t("shopTopUpMiniAppOnly"))
       return
     }
 
@@ -364,7 +356,7 @@ export function ShopScreen() {
           request?: { id: string; transferUrl: string; memo: string }
         }
         if (!create.ok || !createJson.ok || !createJson.request) {
-          setTopUpError("Не удалось создать TON-платеж. Попробуйте позже.")
+          setTopUpError(t("shopTopUpTonFail"))
           return
         }
         transferUrl = createJson.request.transferUrl
@@ -376,7 +368,7 @@ export function ShopScreen() {
       // Баланс обновляется только после подтверждения платежа на бэкенде.
       if (success) {
         if (isTelegramTopup) {
-          setTopUpHint("Откройте кошелек и выполните перевод. Затем нажмите «Проверить оплату».")
+          setTopUpHint(t("shopTopUpOpenWallet"))
         } else {
           setPlayer((p) => ({
             ...p,
@@ -396,7 +388,7 @@ export function ShopScreen() {
           }
         }
       } else {
-        setTopUpError("Не удалось открыть форму оплаты. Попробуйте ещё раз или перезапустите мини‑приложение.")
+        setTopUpError(t("shopTopUpOpenFail"))
       }
     } finally {
       setTopUpLoading(null)
@@ -417,14 +409,12 @@ export function ShopScreen() {
       const json = (await res.json()) as { ok?: boolean; error?: string; confirmed?: boolean; balance?: number; credited?: number }
       if (!res.ok || !json.ok) {
         const msg =
-          json.error === "no_tonapi_key"
-            ? "На сервере не настроен TONAPI_API_KEY для проверки транзакции."
-            : "Подтверждение не прошло. Подождите и попробуйте снова."
+          json.error === "no_tonapi_key" ? t("shopTopUpTonApi") : t("shopTopUpNotConfirmed")
         setTopUpError(msg)
         return
       }
       if (!json.confirmed) {
-        setTopUpHint("Платеж пока не найден в сети. Подождите 10-30 секунд и нажмите ещё раз.")
+        setTopUpHint(t("shopTopUpPending"))
         return
       }
       setPlayer((p) => ({
@@ -432,7 +422,7 @@ export function ShopScreen() {
         balance: typeof json.balance === "number" ? json.balance : p.balance,
         totalPurchases: (p.totalPurchases ?? 0) + (json.credited ?? 0),
       }))
-      setTopUpHint("Платеж подтвержден сервером, монеты зачислены.")
+      setTopUpHint(t("shopTopUpSuccess"))
       setPendingTonTopupId("")
     } finally {
       setCheckingTon(false)
@@ -461,7 +451,7 @@ export function ShopScreen() {
         // чтобы ему пришло уведомление «Начать играть».
         try {
           if (isMiniAppEnvironment()) {
-            await showInviteBox()
+            await showInviteBox(t("inviteShareDefault"))
           }
         } catch {
           // игнорируем сбой открытия инвайта, слоты всё равно обновлены
@@ -484,7 +474,7 @@ export function ShopScreen() {
   const handleInviteFriends = async () => {
     setInviteLoading(true)
     try {
-      await showInviteBox()
+      await showInviteBox(t("inviteShareDefault"))
     } finally {
       setInviteLoading(false)
     }
@@ -517,7 +507,7 @@ export function ShopScreen() {
     if (!promoCode.trim() || promoStatus === "success") return
     if (!platformUser || !isServerPlayerId(player.id)) {
       setPromoStatus("error")
-      setPromoMessage("Промокоды доступны после входа в Telegram Mini App.")
+      setPromoMessage(t("shopPromoTelegramOnly"))
       return
     }
     setPromoStatus("idle")
@@ -536,10 +526,10 @@ export function ShopScreen() {
       if (!json.ok || !json.reward) {
         const msg =
           json.error === "already_used"
-            ? "Вы уже активировали этот промокод."
+            ? t("shopPromoAlready")
             : json.error === "limit_reached"
-              ? "Лимит активаций этого промокода исчерпан."
-              : "Промокод не найден или недействителен."
+              ? t("shopPromoLimit")
+              : t("shopPromoInvalid")
         setPromoStatus("error")
         setPromoMessage(msg)
         return
@@ -563,16 +553,16 @@ export function ShopScreen() {
       setPromoStatus("success")
       const baseText =
         reward.kind === "rubles"
-          ? `Начислено ${formatAmount(reward.amount ?? 0)} монет.`
+          ? t("shopPromoCoins", { amount: formatAmount(reward.amount ?? 0) })
           : reward.kind === "fast_match"
-            ? `Начислено ${reward.amount ?? 1} использований быстрого поиска.`
+            ? t("shopPromoBoost", { amount: reward.amount ?? 1 })
             : reward.kind === "lava_card"
-              ? `Добавлено ${reward.amount ?? 5} использований карты «Лава».`
-              : `Добавлено ${reward.amount ?? 3} использований карты «Вода».`
+              ? t("shopPromoLava", { amount: reward.amount ?? 5 })
+              : t("shopPromoWater", { amount: reward.amount ?? 3 })
       setPromoMessage(baseText)
     } catch {
       setPromoStatus("error")
-      setPromoMessage("Не удалось активировать промокод. Попробуйте позже.")
+      setPromoMessage(t("shopPromoFail"))
     }
   }
 
@@ -669,12 +659,12 @@ export function ShopScreen() {
         <button
           onClick={() => setScreen("menu")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
-          aria-label="Назад"
+          aria-label={t("commonBack")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-center text-base font-bold text-foreground uppercase tracking-wider">
-          Магазин
+          {t("shopTitle")}
         </h1>
         <div className="flex items-center gap-1.5 bg-card/60 backdrop-blur-sm border border-border/30 rounded-full px-3 py-1.5">
           <Coins className="h-3.5 w-3.5 text-accent" />
@@ -683,23 +673,23 @@ export function ShopScreen() {
       </div>
 
       <div className="w-full max-w-lg mb-4 rounded-2xl border border-border/30 bg-card/35 px-4 py-3 backdrop-blur-sm">
-        <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">Легенда магазина</p>
+        <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold mb-2">{t("shopLegend")}</p>
         <div className="flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/35 bg-emerald-500/12 px-2.5 py-1 text-xs text-emerald-100">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
-            Экономика
+            {t("shopLegendEconomy")}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-300/35 bg-blue-500/12 px-2.5 py-1 text-xs text-blue-100">
             <span className="h-1.5 w-1.5 rounded-full bg-blue-300" />
-            Социальное
+            {t("shopLegendSocial")}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-purple-300/35 bg-purple-500/12 px-2.5 py-1 text-xs text-purple-100">
             <span className="h-1.5 w-1.5 rounded-full bg-purple-300" />
-            События и бонусы
+            {t("shopLegendEvents")}
           </span>
         </div>
         <p className="mt-2 text-[11px] text-emerald-200/90">
-          Уровень {levelNumber}: скидка в магазине {shopDiscountPercent}%.
+          {t("shopLevelDiscount", { n: levelNumber, pct: shopDiscountPercent })}
         </p>
       </div>
 
@@ -707,13 +697,13 @@ export function ShopScreen() {
       <div className="w-full max-w-lg mb-6 bg-primary/10 border border-primary/25 rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Wallet className="h-5 w-5 text-primary" />
-          <span className="font-bold text-base text-foreground">Пополнить баланс</span>
+          <span className="font-bold text-base text-foreground">{t("shopTopUpTitle")}</span>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Выберите удобный пакет пополнения.
+          {t("shopTopUpSubtitle")}
         </p>
         <p className="text-xs text-muted-foreground mb-3">
-          Внутренний курс: 1 монета = 0,1 TON-экв.
+          {t("shopRateTon")}
         </p>
         {topUpError && (
           <p className="text-xs text-red-500 mb-2 font-medium">
@@ -725,7 +715,7 @@ export function ShopScreen() {
         )}
         {!isMiniAppEnvironment() && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
-            Для пополнения откройте приложение в Telegram.
+            {t("shopOpenInTelegram")}
           </p>
         )}
         <div className="flex flex-wrap gap-2">
@@ -737,20 +727,20 @@ export function ShopScreen() {
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold transition-all active:scale-95 disabled:opacity-50"
             >
               <Coins className="h-4 w-4" />
-              {topUpLoading === pack.amount ? "..." : `${pack.amount} монет`}
+              {topUpLoading === pack.amount ? "..." : t("shopCoinsPack", { amount: pack.amount })}
             </button>
           ))}
         </div>
         {!!pendingTonTopupId && (
           <div className="mt-3 rounded-xl border border-border/40 bg-card/40 p-3">
-            <p className="text-[11px] text-muted-foreground mb-2">После оплаты проверьте поступление автоматически.</p>
+            <p className="text-[11px] text-muted-foreground mb-2">{t("shopAfterPayHint")}</p>
             <button
               type="button"
               onClick={() => void handleCheckTonTopup()}
               disabled={checkingTon}
               className="px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold disabled:opacity-50"
             >
-              {checkingTon ? "Проверяем..." : "Проверить оплату"}
+              {checkingTon ? t("shopChecking") : t("shopCheckPayment")}
             </button>
           </div>
         )}
@@ -760,14 +750,14 @@ export function ShopScreen() {
       <div className="w-full max-w-lg mb-6 bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <UserPlus className="h-5 w-5 text-primary" />
-          <span className="font-bold text-base text-foreground">Получить {INVITE_REWARD} монет за приглашение 4 друзей</span>
+          <span className="font-bold text-base text-foreground">{t("shopInviteBlockTitle", { amount: INVITE_REWARD })}</span>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Пригласите друзей в игру. Когда они примут приглашение — появятся в ячейках. За 4 принявших приглашение — награда.
+          {t("shopInviteBlockBody")}
         </p>
         {!isMiniAppEnvironment() && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
-            Откройте приложение в Telegram, чтобы приглашать друзей.
+            {t("shopInviteTelegramOnly")}
           </p>
         )}
         <div className="grid grid-cols-4 gap-2 mb-3">
@@ -793,7 +783,7 @@ export function ShopScreen() {
                     className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive transition-colors"
                   >
                     <X className="h-3 w-3" />
-                    Удалить
+                    {t("shopRemove")}
                   </button>
                 </>
               ) : (
@@ -804,7 +794,7 @@ export function ShopScreen() {
                   className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors rounded-lg border border-dashed border-border/50 py-2"
                 >
                   <UserPlus className="h-6 w-6" />
-                  <span className="text-xs">Выбрать друга</span>
+                  <span className="text-xs">{t("shopPickFriend")}</span>
                 </button>
               )}
             </div>
@@ -818,7 +808,7 @@ export function ShopScreen() {
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary/80 text-primary-foreground text-sm font-bold transition-all active:scale-95 disabled:opacity-50"
           >
             <UserPlus className="h-4 w-4" />
-            Пригласить
+            {t("commonInvite")}
           </button>
           <button
             type="button"
@@ -826,7 +816,7 @@ export function ShopScreen() {
             onClick={() => setShowFriendsModal(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-muted/40 text-xs font-semibold text-foreground transition-all active:scale-95 disabled:opacity-50"
           >
-            Посмотреть
+            {t("shopViewFriends")}
           </button>
           {canClaimInviteReward && (
             <button
@@ -835,7 +825,7 @@ export function ShopScreen() {
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent text-accent-foreground text-sm font-bold transition-all active:scale-95"
             >
               <Coins className="h-4 w-4" />
-              Получить {INVITE_REWARD} монет
+              {t("shopClaimInviteReward", { amount: INVITE_REWARD })}
             </button>
           )}
         </div>
@@ -848,15 +838,15 @@ export function ShopScreen() {
         <div className="flex items-center gap-2 mb-3">
           <UserPlus className="h-5 w-5 text-secondary" />
           <span className="font-bold text-base text-foreground">
-            Подпишитесь на наш канал и получите {GROUP_SUB_REWARD} монет
+            {t("shopSubscribeTitle", { amount: GROUP_SUB_REWARD })}
           </span>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Нажмите «Подписаться» — откроем канал и начислим награду один раз.
+          {t("shopSubscribeBody")}
         </p>
         {!isMiniAppEnvironment() && (
           <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
-            Откройте приложение в Telegram, чтобы подписаться на канал.
+            {t("shopSubscribeTelegramChannel")}
           </p>
         )}
         {groupSubError && (
@@ -872,10 +862,10 @@ export function ShopScreen() {
         >
           <Share2 className="h-4 w-4" />
           {groupSubLoading
-            ? "Подписка…"
+            ? t("shopSubscribeLoading")
             : player.groupSubscribedRewardClaimed
-              ? "Вы уже подписаны"
-              : `Подписаться и получить ${GROUP_SUB_REWARD} монет`}
+              ? t("shopSubscribeDone")
+              : t("shopSubscribeRewardBtn", { amount: GROUP_SUB_REWARD })}
         </button>
       </div>
 
@@ -883,10 +873,10 @@ export function ShopScreen() {
       <div className="w-full max-w-lg mb-6 bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Ticket className="h-5 w-5 text-primary" />
-          <span className="font-bold text-base text-foreground">Промокод</span>
+          <span className="font-bold text-base text-foreground">{t("shopPromoTitle")}</span>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Иногда мы дарим промокоды с балансом, особыми картами или бустами. Введите код сюда, чтобы получить подарок.
+          {t("shopPromoBody")}
         </p>
         <div className="flex gap-2 mb-2">
           <input
@@ -897,7 +887,7 @@ export function ShopScreen() {
               setPromoStatus("idle")
               setPromoMessage("")
             }}
-            placeholder="Например: RPS2026"
+            placeholder={t("shopPromoExample")}
             className="flex-1 min-w-0 rounded-xl bg-background/80 border border-border/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60"
           />
           <button
@@ -906,7 +896,7 @@ export function ShopScreen() {
             disabled={!promoCode.trim()}
             className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50"
           >
-            Активировать
+            {t("shopPromoApply")}
           </button>
         </div>
         {promoStatus === "success" && promoMessage && (
@@ -920,7 +910,8 @@ export function ShopScreen() {
       {/* Items */}
       <div className="w-full max-w-lg flex flex-col gap-2.5">
         {SHOP_ITEMS.map((item) => {
-          const itemId = item.id as ShopItemId
+          const itemId = item.id
+          const keys = SHOP_ITEM_KEYS[itemId]
           const alreadyOwned = isOwned(itemId)
           const showPermanentOwnedBadge = (itemId === "frame-neon" || itemId === "frame-gold") && alreadyOwned
           const lavaOutOfStock = itemId === "lava-card" && lavaCardStock <= 0
@@ -937,20 +928,20 @@ export function ShopScreen() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-base font-bold text-foreground">{item.name}</h3>
+                  <h3 className="text-base font-bold text-foreground">{t(keys.name)}</h3>
                   {showPermanentOwnedBadge && (
                     <span className="inline-flex items-center rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
-                      Куплено навсегда
+                      {t("shopBadgeOwnedForever")}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground font-medium leading-relaxed">{item.description}</p>
+                <p className="text-xs text-muted-foreground font-medium leading-relaxed">{t(keys.desc)}</p>
                 {item.id === "lava-card" && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5">В наличии: {lavaCardStock} из 3</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{t("betsSidebarLavaStock", { n: lavaCardStock })}</p>
                 )}
                 {item.id === "timer-plus-10" && timerCooldownLeftMs > 0 && (
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Можно купить через {timerCooldownText}
+                    {t("shopTimerBuyAfter", { time: timerCooldownText })}
                   </p>
                 )}
               </div>
@@ -964,7 +955,7 @@ export function ShopScreen() {
                     : "bg-muted/30 text-muted-foreground border border-border/30 cursor-not-allowed"
                 }`}
               >
-                {buyingItemId === item.id ? "Покупка..." : item.id === "lava-card" && lavaOutOfStock ? "Нет в наличии" : alreadyOwned ? "Куплено" : (
+                {buyingItemId === item.id ? t("shopPurchasing") : item.id === "lava-card" && lavaOutOfStock ? t("shopOutOfStock") : alreadyOwned ? t("shopOwned") : (
                   <>
                     <Coins className="h-3 w-3" />
                     {formatAmount(toDisplayAmount(effectivePrice))} {currencyLabel}
@@ -992,20 +983,20 @@ export function ShopScreen() {
           <div className="w-full max-w-sm mx-4 rounded-2xl bg-card/95 border border-border/40 shadow-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-bold text-foreground">
-                Друзья, которые уже играют
+                {t("shopFriendsModalTitle")}
               </h2>
               <button
                 type="button"
                 onClick={() => setShowFriendsModal(false)}
                 className="p-1.5 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground"
-                aria-label="Закрыть"
+                aria-label={t("commonClose")}
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             {invitedCount === 0 ? (
               <p className="text-xs text-muted-foreground">
-                Пока ни один друг не принял приглашение. Пригласите друзей, и они появятся здесь.
+                {t("shopFriendsModalEmpty")}
               </p>
             ) : (
               <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
@@ -1098,12 +1089,12 @@ export function ShopScreen() {
                     ) : prize.kind === "bonus" || prize.kind === "double_bonus" ? (
                       <>
                         <Zap className="w-6 h-6 text-secondary shrink-0" />
-                        <span className="font-bold text-secondary">Бонусы +{prize.amount ?? 2}</span>
+                        <span className="font-bold text-secondary">{t("shopChestBonus", { n: prize.amount ?? 2 })}</span>
                       </>
                     ) : (
                       <>
                         <Zap className="w-6 h-6 text-primary shrink-0" />
-                        <span className="font-bold text-foreground">Быстрый поиск +{prize.amount ?? 1}</span>
+                        <span className="font-bold text-foreground">{t("shopChestFastMatch", { n: prize.amount ?? 1 })}</span>
                       </>
                     )}
                   </div>
@@ -1113,7 +1104,7 @@ export function ShopScreen() {
                 onClick={handleCollectChest}
                 className="px-8 py-4 rounded-2xl bg-accent text-accent-foreground font-bold text-lg shadow-lg hover:opacity-90 active:scale-[0.98] transition-all"
               >
-                Собрать
+                {t("shopChestCollect")}
               </button>
             </div>
           </div>

@@ -3,15 +3,17 @@
 import { useGame } from "@/lib/game-context"
 import { formatAmount } from "@/lib/format-amount"
 import { ArrowLeft, Coins, Flame } from "lucide-react"
+import { useI18n } from "@/lib/i18n/context"
+import type { Translate } from "@/lib/i18n/context"
 
 /** Ставка и режим: 5,10 = быстрая игра (1 ход); 25,50 = 3 хода; 100,250 = 5 ходов */
-const BET_OPTIONS: { value: number; rounds: 1 | 3 | 5; modeLabel: string }[] = [
-  { value: 5, rounds: 1, modeLabel: "Быстрая игра" },
-  { value: 10, rounds: 1, modeLabel: "Быстрая игра" },
-  { value: 25, rounds: 3, modeLabel: "3 хода" },
-  { value: 50, rounds: 3, modeLabel: "3 хода" },
-  { value: 100, rounds: 5, modeLabel: "5 ходов" },
-  { value: 250, rounds: 5, modeLabel: "5 ходов" },
+const BET_OPTIONS: { value: number; rounds: 1 | 3 | 5 }[] = [
+  { value: 5, rounds: 1 },
+  { value: 10, rounds: 1 },
+  { value: 25, rounds: 3 },
+  { value: 50, rounds: 3 },
+  { value: 100, rounds: 5 },
+  { value: 250, rounds: 5 },
 ]
 
 function getTierAccent(rounds: number) {
@@ -20,13 +22,14 @@ function getTierAccent(rounds: number) {
   return "border-destructive/30 hover:border-destructive/60"
 }
 
-function getTierBadge(rounds: number) {
-  if (rounds === 1) return { label: "1 ход", cls: "bg-primary/15 text-primary" }
-  if (rounds === 3) return { label: "3 хода", cls: "bg-secondary/15 text-secondary" }
-  return { label: "5 ходов", cls: "bg-destructive/15 text-destructive" }
+function getTierBadge(rounds: number, t: Translate) {
+  if (rounds === 1) return { label: t("betRounds1"), cls: "bg-primary/15 text-primary" }
+  if (rounds === 3) return { label: t("betRounds3"), cls: "bg-secondary/15 text-secondary" }
+  return { label: t("betRounds5"), cls: "bg-destructive/15 text-destructive" }
 }
 
 export function BetSelect() {
+  const { t } = useI18n()
   const { setScreen, setCurrentBet, setTotalRounds, player, setPlayer, toDisplayAmount, currencyLabel, weeklyRules } = useGame()
 
   const handleSelectBet = (value: number, rounds: 1 | 3 | 5) => {
@@ -46,12 +49,12 @@ export function BetSelect() {
         <button
           onClick={() => setScreen("menu")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
-          aria-label="Назад"
+          aria-label={t("commonBack")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-center text-base font-bold text-foreground uppercase tracking-wider">
-          Выбор ставки
+          {t("betSelectTitle")}
         </h1>
         <div className="w-9" />
       </div>
@@ -65,7 +68,7 @@ export function BetSelect() {
       </div>
 
       <p className="text-muted-foreground text-sm mb-6 text-center font-medium">
-        Выберите ставку и режим: 5–10 монет — быстрая игра, 25–50 монет — 3 хода, 100–250 монет — 5 ходов
+        {t("betSelectHint")}
       </p>
 
       {weeklyRules && (
@@ -77,9 +80,9 @@ export function BetSelect() {
 
       {/* Сетка: ставка + режим (объединённое поле) */}
       <div className="w-full max-w-lg grid grid-cols-2 gap-3">
-        {BET_OPTIONS.map(({ value, rounds, modeLabel }) => {
+        {BET_OPTIONS.map(({ value, rounds }) => {
           const canAfford = player.balance >= value
-          const badge = getTierBadge(rounds)
+          const badge = getTierBadge(rounds, t)
           return (
             <button
               key={value}
@@ -111,7 +114,7 @@ export function BetSelect() {
       {/* Info */}
       <div className="mt-6 w-full max-w-lg bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4">
         <p className="text-sm text-muted-foreground text-center font-medium">
-          Ставка × 2 = банк. Без комиссии.
+          {t("betSelectBankHint")}
         </p>
       </div>
     </div>

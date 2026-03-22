@@ -11,6 +11,7 @@ import {
 } from "@/lib/liveops/client"
 import { Check, Info, Lock, Sparkles, Swords, Trophy } from "lucide-react"
 import { isServerPlayerId } from "@/lib/platform-user"
+import { useI18n } from "@/lib/i18n/context"
 
 interface RewardDto {
   kind: string
@@ -66,23 +67,6 @@ interface StateResponse {
 
 type ApiErrorPayload = { ok?: boolean; error?: string }
 
-function rewardText(r: RewardDto) {
-  if (r.kind === "coins") return `Монеты +${r.amount ?? 0}`
-  if (r.kind === "voices") return `Голоса +${r.amount ?? 0}`
-  if (r.kind === "event_tokens") return `Жетоны +${r.amount ?? 0}`
-  if (r.kind === "xp") return `Опыт +${r.amount ?? 0}`
-  if (r.kind === "boost_double_win") return `Буст x2: +${r.amount ?? 0}`
-  if (r.kind === "skin") return `Скин: ${r.skinId ?? "неизвестно"}`
-  if (r.kind === "title") return `Титул: ${r.titleId ?? "неизвестно"}`
-  return r.kind
-}
-
-function resetLabel(reset: "daily" | "weekly" | "monthly") {
-  if (reset === "daily") return "Ежедневно"
-  if (reset === "weekly") return "Еженедельно"
-  return "Ежемесячно"
-}
-
 function toErrorCode(error: unknown): string {
   if (!error) return "unknown_error"
   if (typeof error === "string") return error
@@ -94,18 +78,36 @@ function toErrorCode(error: unknown): string {
   return "unknown_error"
 }
 
-function toFriendlyErrorMessage(error: unknown): string {
-  const code = toErrorCode(error)
-  if (code.includes("insufficient_voices")) return "Недостаточно голосов для открытия премиум-пропуска."
-  if (code.includes("pass_premium_already")) return "Премиум-пропуск уже открыт."
-  if (code.includes("player_not_found")) return "Профиль игрока не найден."
-  if (code.includes("invalid_user")) return "Некорректный пользователь."
-  if (code.includes("no_server")) return "Сервер недоступен в текущем режиме."
-  return "Не удалось выполнить действие. Попробуйте позже."
-}
-
 export function LiveOpsDashboard() {
+  const { t } = useI18n()
   const { player, setPlayer, setScreen } = useGame()
+
+  const rewardText = (r: RewardDto) => {
+    if (r.kind === "coins") return t("liveopsRewardCoins", { amount: r.amount ?? 0 })
+    if (r.kind === "voices") return t("liveopsRewardVoices", { amount: r.amount ?? 0 })
+    if (r.kind === "event_tokens") return t("liveopsRewardTokens", { amount: r.amount ?? 0 })
+    if (r.kind === "xp") return t("liveopsRewardXp", { amount: r.amount ?? 0 })
+    if (r.kind === "boost_double_win") return t("liveopsRewardBoost", { amount: r.amount ?? 0 })
+    if (r.kind === "skin") return t("liveopsRewardSkin", { id: r.skinId ?? t("liveopsUnknown") })
+    if (r.kind === "title") return t("liveopsRewardTitle", { id: r.titleId ?? t("liveopsUnknown") })
+    return r.kind
+  }
+
+  const resetLabel = (reset: "daily" | "weekly" | "monthly") => {
+    if (reset === "daily") return t("liveopsResetDaily")
+    if (reset === "weekly") return t("liveopsResetWeekly")
+    return t("liveopsResetMonthly")
+  }
+
+  const toFriendlyErrorMessage = (error: unknown): string => {
+    const code = toErrorCode(error)
+    if (code.includes("insufficient_voices")) return t("liveopsErrVoices")
+    if (code.includes("pass_premium_already")) return t("liveopsErrPassOpen")
+    if (code.includes("player_not_found")) return t("liveopsErrNoPlayer")
+    if (code.includes("invalid_user")) return t("liveopsErrInvalidUser")
+    if (code.includes("no_server")) return t("liveopsErrNoServer")
+    return t("liveopsErrGeneric")
+  }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<StateResponse | null>(null)
@@ -129,7 +131,7 @@ export function LiveOpsDashboard() {
             : (p.vkVoicesBalance ?? 0),
       }))
     } catch {
-      setError("Не удалось загрузить прогресс событий")
+      setError(t("liveopsLoadError"))
     } finally {
       setLoading(false)
     }
@@ -226,21 +228,21 @@ export function LiveOpsDashboard() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Swords className="h-5 w-5 text-sky-300" />
-            <p className="text-base md:text-lg font-extrabold text-foreground">Событие недели</p>
+            <p className="text-base md:text-lg font-extrabold text-foreground">{t("liveopsWeeklyEvent")}</p>
           </div>
           <button
             type="button"
             onClick={() => void reload()}
             className="text-xs px-3 py-1.5 rounded-xl border border-border/50 text-muted-foreground"
           >
-            Обновить
+            {t("commonRefresh")}
           </button>
         </div>
         {loading ? (
-          <p className="text-sm text-muted-foreground mt-3">Загрузка...</p>
+          <p className="text-sm text-muted-foreground mt-3">{t("commonLoading")}</p>
         ) : (
           <>
-            <p className="text-base text-foreground mt-3 font-medium">{data?.weeklyEvent?.title ?? "Нет события"}</p>
+            <p className="text-base text-foreground mt-3 font-medium">{data?.weeklyEvent?.title ?? t("liveopsNoEvent")}</p>
             <p className="text-sm text-muted-foreground mt-1">{data?.weeklyEvent?.description ?? ""}</p>
             {data?.weeklyEvent?.mode === "boss_week" && (
               <button
@@ -251,7 +253,7 @@ export function LiveOpsDashboard() {
                 }}
                 className="mt-4 px-4 py-2.5 rounded-2xl bg-red-500/20 border border-red-400/50 text-red-200 text-sm font-semibold"
               >
-                Войти в бой с Боссом
+                {t("liveopsEnterBoss")}
               </button>
             )}
           </>
@@ -267,26 +269,28 @@ export function LiveOpsDashboard() {
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <p className="text-base md:text-lg font-extrabold text-foreground">Боевой пропуск</p>
+            <p className="text-base md:text-lg font-extrabold text-foreground">{t("liveopsBattlePass")}</p>
             <button
               type="button"
               onClick={() => setShowPassInfo((v) => !v)}
               className="inline-flex items-center gap-1 rounded-xl border border-amber-300/45 bg-amber-500/10 px-2.5 py-1 text-xs text-amber-100 hover:bg-amber-500/20"
             >
               <Info className="h-3.5 w-3.5" />
-              Информация
+              {t("liveopsInfo")}
             </button>
           </div>
-          <span className="text-xs md:text-sm text-muted-foreground">Уровень {pass?.level ?? 0}/{maxLevel}</span>
+          <span className="text-xs md:text-sm text-muted-foreground">
+            {t("liveopsPassLevel", { current: pass?.level ?? 0, max: maxLevel })}
+          </span>
         </div>
         {showPassInfo && (
           <div className="mt-3 rounded-2xl border border-amber-300/35 bg-black/20 p-3.5">
-            <p className="text-sm font-semibold text-amber-100">Что нужно сделать</p>
+            <p className="text-sm font-semibold text-amber-100">{t("liveopsPassHowTitle")}</p>
             <ul className="mt-2 space-y-1 text-xs text-amber-50/90">
-              <li>• Играйте матчи и побеждайте, чтобы получать очки пропуска.</li>
-              <li>• Выполняйте квесты в блоке ниже — это ускоряет прокачку уровней.</li>
-              <li>• Бесплатные награды можно забирать при достижении уровня.</li>
-              <li>• Для премиум-наград откройте пропуск за 15 голосов VK.</li>
+              <li>• {t("liveopsPassHow1")}</li>
+              <li>• {t("liveopsPassHow2")}</li>
+              <li>• {t("liveopsPassHow3")}</li>
+              <li>• {t("liveopsPassHow4")}</li>
             </ul>
           </div>
         )}
@@ -307,7 +311,7 @@ export function LiveOpsDashboard() {
                 : "bg-amber-500/20 border border-amber-400/60 text-amber-100"
             }`}
           >
-            Открыть премиум за {premiumCostVoices} голосов
+            {t("liveopsOpenPremium", { n: premiumCostVoices })}
           </button>
         )}
         {!pass?.premiumUnlocked && (
@@ -316,7 +320,7 @@ export function LiveOpsDashboard() {
               hasInsufficientVoices ? "text-red-200" : "text-muted-foreground"
             }`}
           >
-            Голоса: {voicesBalance}. Требуется: {premiumCostVoices}.
+            {t("liveopsVoicesNeed", { have: voicesBalance, need: premiumCostVoices })}
           </p>
         )}
         <div className="mt-3 space-y-2.5 max-h-52 overflow-auto pr-1">
@@ -330,7 +334,7 @@ export function LiveOpsDashboard() {
                 className="rounded-2xl border border-border/30 p-3 bg-gradient-to-br from-white/[0.04] via-card/35 to-white/[0.02]"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-foreground font-semibold">Уровень {lvl.level}</span>
+                  <span className="text-sm text-foreground font-semibold">{t("liveopsLevelN", { n: lvl.level })}</span>
                   {!unlocked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5">{rewardText(lvl.freeRewards[0])}</p>
@@ -341,7 +345,7 @@ export function LiveOpsDashboard() {
                     onClick={() => void onClaimPass(lvl.level, false)}
                     className="text-xs px-2.5 py-1.5 rounded-lg border border-emerald-400/40 text-emerald-300 disabled:opacity-50"
                   >
-                    {freeClaimed ? "Получено" : "Забрать (бесплатно)"}
+                    {freeClaimed ? t("liveopsClaimed") : t("liveopsClaimFree")}
                   </button>
                   <button
                     type="button"
@@ -349,7 +353,7 @@ export function LiveOpsDashboard() {
                     onClick={() => void onClaimPass(lvl.level, true)}
                     className="text-xs px-2.5 py-1.5 rounded-lg border border-amber-400/40 text-amber-300 disabled:opacity-50"
                   >
-                    {premClaimed ? "Получено" : "Забрать (премиум)"}
+                    {premClaimed ? t("liveopsClaimed") : t("liveopsClaimPremium")}
                   </button>
                 </div>
               </div>
@@ -361,7 +365,7 @@ export function LiveOpsDashboard() {
       <div
         className={`${bigCardBase} border-cyan-300/30 bg-gradient-to-br from-cyan-500/16 via-card/55 to-blue-500/10 shadow-[0_0_0_1px_rgba(56,189,248,0.20),0_0_28px_rgba(56,189,248,0.12)]`}
       >
-        <p className="text-base md:text-lg font-extrabold text-foreground">Квесты</p>
+        <p className="text-base md:text-lg font-extrabold text-foreground">{t("liveopsQuests")}</p>
         <div className="mt-3 space-y-3 max-h-60 overflow-auto pr-1">
           {(data?.config?.quests ?? []).map((q) => {
             const progress = questProgressMap.get(q.id)
@@ -378,7 +382,11 @@ export function LiveOpsDashboard() {
                   <span className="text-[11px] text-muted-foreground uppercase">{resetLabel(q.reset)}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1.5">
-                  {value}/{q.condition.target} | +{q.points} очков пропуска
+                  {t("liveopsQuestProgress", {
+                    value,
+                    target: q.condition.target,
+                    points: q.points,
+                  })}
                 </p>
                 <button
                   type="button"
@@ -386,7 +394,7 @@ export function LiveOpsDashboard() {
                   onClick={() => void onClaimQuest(q.id)}
                   className="mt-3 text-xs px-3 py-2 rounded-xl border border-sky-400/40 text-sky-300 font-semibold disabled:opacity-50"
                 >
-                  {claimed ? "Получено" : done ? "Забрать" : "Не выполнено"}
+                  {claimed ? t("liveopsClaimed") : done ? t("commonClaim") : t("liveopsNotDone")}
                 </button>
               </div>
             )
@@ -399,7 +407,7 @@ export function LiveOpsDashboard() {
       >
         <div className="flex items-center gap-2">
           <Trophy className="h-5 w-5 text-amber-300" />
-          <p className="text-base md:text-lg font-extrabold text-foreground">Достижения</p>
+          <p className="text-base md:text-lg font-extrabold text-foreground">{t("liveopsAchievements")}</p>
         </div>
         <div className="mt-3 space-y-3 max-h-52 overflow-auto pr-1">
           {(data?.config?.achievements ?? []).map((a) => {
@@ -425,7 +433,7 @@ export function LiveOpsDashboard() {
                   onClick={() => void onClaimAchievement(a.id)}
                   className="mt-3 text-xs px-3 py-2 rounded-xl border border-amber-400/40 text-amber-300 font-semibold disabled:opacity-50"
                 >
-                  {claimed ? "Получено" : "Забрать титул"}
+                  {claimed ? t("liveopsClaimed") : t("liveopsClaimTitle")}
                 </button>
               </div>
             )
@@ -436,7 +444,7 @@ export function LiveOpsDashboard() {
       {player.activeTitleId && (
         <div className="rounded-3xl border border-purple-400/30 bg-gradient-to-br from-purple-500/16 via-card/55 to-violet-500/10 p-4 flex items-center gap-2.5">
           <Sparkles className="h-5 w-5 text-purple-300" />
-          <span className="text-sm text-purple-100">Активный титул: {player.activeTitleId}</span>
+          <span className="text-sm text-purple-100">{t("liveopsActiveTitle", { id: player.activeTitleId })}</span>
         </div>
       )}
 

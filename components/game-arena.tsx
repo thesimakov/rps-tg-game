@@ -8,25 +8,34 @@ import { Coins, Timer, Zap, Heart, ChevronUp, ChevronDown, ShieldAlert } from "l
 import { PlayerAvatar, VipBadgeOnFrame } from "@/components/player-avatar"
 import { sendMatchResult } from "@/lib/liveops/client"
 import { isServerPlayerId } from "@/lib/platform-user"
+import { useI18n } from "@/lib/i18n/context"
+import type { Translate } from "@/lib/i18n/context"
+import { BOSS_REWARD_LABEL_KEY } from "@/lib/i18n/boss-reward-keys"
 
-const BASE_MOVES: { key: Move; label: string; icon: string; color: string }[] = [
-  { key: "rock", label: "Камень", icon: "\uD83E\uDEA8", color: "border-secondary/50 shadow-secondary/10" },
-  { key: "scissors", label: "Ножницы", icon: "\u2702\uFE0F", color: "border-destructive/50 shadow-destructive/10" },
-  { key: "paper", label: "Бумага", icon: "\uD83D\uDCC4", color: "border-primary/50 shadow-primary/10" },
+const BASE_MOVES: { key: Move; icon: string; color: string }[] = [
+  { key: "rock", icon: "\uD83E\uDEA8", color: "border-secondary/50 shadow-secondary/10" },
+  { key: "scissors", icon: "\u2702\uFE0F", color: "border-destructive/50 shadow-destructive/10" },
+  { key: "paper", icon: "\uD83D\uDCC4", color: "border-primary/50 shadow-primary/10" },
 ]
 
-const FIRE_MOVE: { key: Move; label: string; icon: string; color: string } = {
+const FIRE_MOVE: { key: Move; icon: string; color: string } = {
   key: "fire",
-  label: "Огонь",
   icon: "\uD83D\uDD25",
   color: "border-orange-500/60 shadow-orange-500/20",
 }
 
-const WATER_MOVE: { key: Move; label: string; icon: string; color: string } = {
+const WATER_MOVE: { key: Move; icon: string; color: string } = {
   key: "water",
-  label: "Вода",
   icon: "\uD83C\uDF0A",
   color: "border-sky-500/50 shadow-sky-500/10",
+}
+
+function moveLabel(t: Translate, key: Move): string {
+  if (key === "rock") return t("moveRock")
+  if (key === "scissors") return t("moveScissors")
+  if (key === "paper") return t("movePaper")
+  if (key === "water") return t("moveWater")
+  return t("moveFire")
 }
 
 function getOutcome(p: Move, o: Move): "win" | "loss" | "draw" {
@@ -67,7 +76,7 @@ function getRandomMove(): Move {
 function getMoveThatBeats(move: Move): Move {
   if (move === "rock") return "paper"
   if (move === "scissors") return "rock"
-  if (move === "water") return "paper" // бумага бьёт воду
+  if (move === "water") return "paper" // paper beats water
   if (move === "fire") return "water"
   return "scissors"
 }
@@ -101,16 +110,15 @@ function getBossChestReward(pityCounter: number) {
   type BossChestReward = {
     rarity: "rare" | "epic" | "legendary"
     rewardId: string
-    rewardLabel: string
     rewardCoins: number
     rewardRating: number
   }
   const rewards: BossChestReward[] = [
-    { rarity: "rare" as const, rewardId: "rare_obsidian_rock", rewardLabel: "Редкий скин: Обсидиановый Камень", rewardCoins: 500, rewardRating: 120 },
-    { rarity: "rare" as const, rewardId: "rare_phantom_scissors", rewardLabel: "Редкий скин: Призрачные Ножницы", rewardCoins: 550, rewardRating: 130 },
-    { rarity: "epic" as const, rewardId: "epic_aurora_paper", rewardLabel: "Эпический скин: Северная Бумага", rewardCoins: 800, rewardRating: 180 },
-    { rarity: "epic" as const, rewardId: "epic_solar_blade", rewardLabel: "Эпический скин: Солнечные Ножницы", rewardCoins: 850, rewardRating: 200 },
-    { rarity: "legendary" as const, rewardId: "legendary_void_hand", rewardLabel: "Легендарный скин: Длань Пустоты", rewardCoins: 1300, rewardRating: 300 },
+    { rarity: "rare" as const, rewardId: "rare_obsidian_rock", rewardCoins: 500, rewardRating: 120 },
+    { rarity: "rare" as const, rewardId: "rare_phantom_scissors", rewardCoins: 550, rewardRating: 130 },
+    { rarity: "epic" as const, rewardId: "epic_aurora_paper", rewardCoins: 800, rewardRating: 180 },
+    { rarity: "epic" as const, rewardId: "epic_solar_blade", rewardCoins: 850, rewardRating: 200 },
+    { rarity: "legendary" as const, rewardId: "legendary_void_hand", rewardCoins: 1300, rewardRating: 300 },
   ]
   if (pityCounter >= 9) {
     const legendaryPool = rewards.filter((r) => r.rarity === "legendary")
@@ -124,26 +132,45 @@ function getBossChestReward(pityCounter: number) {
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
-/** Текст исхода раунда для подсказки на арене */
-function getOutcomePhrase(playerMove: Move, opponentMove: Move, outcome: "win" | "loss" | "draw"): string {
-  if (outcome === "draw") return "Одинаковый ход"
+/** Текст исхода раунда для подсказки на арене + тон для стиля */
+function getRoundOutcomeHint(
+  t: Translate,
+  playerMove: Move,
+  opponentMove: Move,
+  outcome: "win" | "loss" | "draw"
+): { message: string; tone: "win" | "loss" | "neutral" } {
+  if (outcome === "draw") return { message: "", tone: "neutral" }
   const winner = outcome === "win" ? playerMove : opponentMove
   const loser = outcome === "win" ? opponentMove : playerMove
-  if (winner === "rock" && loser === "scissors") return "Камень разбил ножницы"
-  if (winner === "scissors" && loser === "paper") return "Ножницы порезали бумагу"
-  if (winner === "paper" && loser === "rock") return "Бумага обернула камень"
-  if (winner === "water" && loser === "rock") return "Вода размыла камень"
-  if (winner === "paper" && loser === "water") return "Бумага впитала воду"
-  if (winner === "fire" && loser === "rock") return "Огонь оплавил камень"
-  if (winner === "rock" && loser === "water") return "Камень рассекает поток"
-  if (winner === "water" && loser === "fire") return "Вода потушила огонь"
-  if (winner === "water" || loser === "water") return outcome === "win" ? "Победа!" : "Поражение!"
-  return outcome === "win" ? "Победа!" : "Поражение!"
+  if (winner === "rock" && loser === "scissors") return { message: t("outcomeRockCrushesScissors"), tone: "neutral" }
+  if (winner === "scissors" && loser === "paper") return { message: t("outcomeScissorsCutPaper"), tone: "neutral" }
+  if (winner === "paper" && loser === "rock") return { message: t("outcomePaperCoversRock"), tone: "neutral" }
+  if (winner === "water" && loser === "rock") return { message: t("outcomeWaterErodesRock"), tone: "neutral" }
+  if (winner === "paper" && loser === "water") return { message: t("outcomePaperSoaksWater"), tone: "neutral" }
+  if (winner === "fire" && loser === "rock") return { message: t("outcomeFireMeltsRock"), tone: "neutral" }
+  if (winner === "rock" && loser === "water") return { message: t("outcomeRockPartsWater"), tone: "neutral" }
+  if (winner === "water" && loser === "fire") return { message: t("outcomeWaterExtinguishesFire"), tone: "neutral" }
+  if (winner === "water" || loser === "water") {
+    return {
+      message: outcome === "win" ? t("outcomeWin") : t("outcomeLoss"),
+      tone: outcome === "win" ? "win" : "loss",
+    }
+  }
+  return {
+    message: outcome === "win" ? t("outcomeWin") : t("outcomeLoss"),
+    tone: outcome === "win" ? "win" : "loss",
+  }
+}
+
+function bossRewardLabelFromRoll(t: Translate, rewardId: string): string {
+  const key = BOSS_REWARD_LABEL_KEY[rewardId]
+  return key ? t(key) : rewardId
 }
 
 type Phase = "choosing" | "locked" | "revealing" | "resolved"
 
 export function GameArena() {
+  const { t } = useI18n()
   const { opponent, player, setPlayer, currentBet, setLastResult, setScreen, totalRounds, weeklyRules } = useGame()
   const activeMode = player.activeWeeklyMode ?? weeklyRules?.event.mode
   const isElementsMode = activeMode === "elements_tournament"
@@ -162,6 +189,7 @@ export function GameArena() {
     : hasWaterCard
       ? [...BASE_MOVES, WATER_MOVE]
       : BASE_MOVES
+  const movesWithLabels = MOVES.map((m) => ({ ...m, label: moveLabel(t, m.key) }))
   const hasExtraTimer = (player.extraTimerUntil ?? 0) > Date.now()
   const baseTimer = hasExtraTimer ? 25 : 15
 
@@ -177,6 +205,7 @@ export function GameArena() {
   const [drawMessage, setDrawMessage] = useState(false)
   /** Подсказка что произошло в раунде (победа/поражение) — для 3 и 5 раундов */
   const [roundHintMessage, setRoundHintMessage] = useState<string | null>(null)
+  const [roundHintTone, setRoundHintTone] = useState<"win" | "loss" | "neutral" | null>(null)
   /** Показать карту соперника с небольшой задержкой после выбора игрока */
   const [showOpponentCard, setShowOpponentCard] = useState(false)
 
@@ -301,7 +330,9 @@ export function GameArena() {
         }
 
         // Подсказка что произошло (для мультираунда)
-        setRoundHintMessage(getOutcomePhrase(playerMove, oppMove, outcome))
+        const hint = getRoundOutcomeHint(t, playerMove, oppMove, outcome)
+        setRoundHintMessage(hint.message)
+        setRoundHintTone(hint.tone)
 
         // Обновляем локальный счёт матча по раундам
         if (outcome === "win") {
@@ -357,6 +388,7 @@ export function GameArena() {
               const reward = getBossChestReward(currentPity)
               next.bossChestPending = {
                 ...reward,
+                rewardLabel: bossRewardLabelFromRoll(t, reward.rewardId),
                 createdAt: Date.now(),
               }
               next.bossChestPityCounter = reward.rarity === "legendary" ? 0 : currentPity + 1
@@ -388,6 +420,7 @@ export function GameArena() {
 
         const doneTimer = setTimeout(() => {
           setRoundHintMessage(null)
+          setRoundHintTone(null)
           const nextRound = roundCount + 1
           if (nextRound > totalRounds) {
             // Матч завершён.
@@ -425,6 +458,7 @@ export function GameArena() {
                   const reward = getBossChestReward(currentPity)
                   next.bossChestPending = {
                     ...reward,
+                    rewardLabel: bossRewardLabelFromRoll(t, reward.rewardId),
                     createdAt: Date.now(),
                   }
                   next.bossChestPityCounter = reward.rarity === "legendary" ? 0 : currentPity + 1
@@ -479,6 +513,7 @@ export function GameArena() {
       playerScore,
       opponentScore,
       trackLiveOpsMatch,
+      t,
     ]
   )
 
@@ -521,7 +556,7 @@ export function GameArena() {
 
   const opponentData: Player = opponent ?? {
     id: "opponent",
-    name: "Соперник",
+    name: t("arenaOpponent"),
     avatar: "?",
     avatarUrl: "",
     balance: 0,
@@ -555,7 +590,7 @@ export function GameArena() {
           {/* Банк */}
           <div className="flex flex-col">
             <span className="text-base font-semibold text-white/95 uppercase tracking-wider">
-              Банк
+              {t("arenaBank")}
             </span>
             <div className="mt-1 flex items-baseline gap-2">
               <Coins className="h-5 w-5 text-amber-400 flex-shrink-0" />
@@ -564,11 +599,11 @@ export function GameArena() {
               </span>
             </div>
             <span className="mt-0.5 text-[11px] text-white/70 font-medium uppercase tracking-wide">
-              {isBlindLuckMode ? "моя ставка + скрытая" : "монет"}
+              {isBlindLuckMode ? t("arenaBankBlind") : t("commonCoins")}
             </span>
             {isTimeMoneyMode && (
               <span className="mt-1 inline-flex w-fit px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 animate-pulse">
-                x{stakeMultiplier} (Time Is Money)
+                {t("arenaTimeIsMoneyBadge", { n: stakeMultiplier })}
               </span>
             )}
           </div>
@@ -576,7 +611,7 @@ export function GameArena() {
           {/* Бонусы */}
           <div className="flex flex-col items-center">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-white/70">
-              Бонусы
+              {t("arenaBonuses")}
             </span>
             <div className="mt-1 px-4 py-1 rounded-full border border-amber-400/70 bg-amber-500/20">
               <span className="text-sm font-bold text-amber-200 tabular-nums">
@@ -588,10 +623,14 @@ export function GameArena() {
           {/* Раунд + сердечки */}
           <div className="flex flex-col items-end">
             <span className="text-base font-semibold text-white uppercase tracking-widest leading-none">
-              Раунд {roundCount} из {totalRounds}
+              {t("arenaRound", { current: roundCount, total: totalRounds })}
             </span>
             <span className="mt-1 text-[11px] text-white/70 font-medium">
-              Формат матча: {totalRounds} {totalRounds === 1 ? "ход" : totalRounds < 5 ? "хода" : "ходов"} (для обоих)
+              {totalRounds === 1
+                ? t("arenaFormatOne")
+                : totalRounds >= 2 && totalRounds <= 4
+                  ? t("arenaFormatFew", { n: totalRounds })
+                  : t("arenaFormatMany", { n: totalRounds })}
             </span>
             <div className="mt-1 flex gap-1">
               {Array.from({ length: totalRounds }).map((_, i) => (
@@ -612,7 +651,7 @@ export function GameArena() {
         {isBossMode && (
           <div className="w-full rounded-xl border border-red-400/40 bg-red-500/10 px-3 py-2 flex items-center justify-center gap-2">
             <ShieldAlert className="h-4 w-4 text-red-300" />
-            <span className="text-xs font-semibold text-red-200">BOSS BATTLE: адаптивный ИИ анализирует ваши паттерны</span>
+            <span className="text-xs font-semibold text-red-200">{t("arenaBossBanner")}</span>
           </div>
         )}
         {opponentData.vip ? (
@@ -752,20 +791,24 @@ export function GameArena() {
           {/* Локальный счёт раундов: соперник : игрок, стрелки обозначают игроков */}
           {totalRounds > 1 && (
             <div className="mt-2 flex items-center gap-3">
-              <ChevronUp className="h-4 w-4 text-red-300" aria-label="Соперник" />
+              <ChevronUp className="h-4 w-4 text-red-300" aria-label={t("arenaOpponent")} />
               <span className="text-lg font-black text-white tabular-nums">
                 {opponentScore} : {playerScore}
               </span>
-              <ChevronDown className="h-4 w-4 text-emerald-300" aria-label="Вы" />
+              <ChevronDown className="h-4 w-4 text-emerald-300" aria-label={t("commonYou")} />
             </div>
           )}
           {drawMessage && (
-            <p className="text-sm text-amber-400 font-bold animate-in fade-in">Ничья! Ещё раунд...</p>
+            <p className="text-sm text-amber-400 font-bold animate-in fade-in">{t("arenaDrawRound")}</p>
           )}
           {roundHintMessage && !drawMessage && (
             <p
               className={`text-sm font-bold animate-in fade-in ${
-                roundHintMessage.startsWith("Побед") ? "text-emerald-400" : roundHintMessage.startsWith("Поражен") ? "text-red-400" : "text-white/90"
+                roundHintTone === "win"
+                  ? "text-emerald-400"
+                  : roundHintTone === "loss"
+                    ? "text-red-400"
+                    : "text-white/90"
               }`}
             >
               {roundHintMessage}
@@ -776,7 +819,7 @@ export function GameArena() {
 
       {/* Кнопки выбора: три карты лицевой стороной — игрок сразу видит Камень, Ножницы, Бумагу */}
       <div className="flex justify-center gap-4 w-full max-w-lg mx-auto mb-6">
-        {MOVES.map((move) => {
+        {movesWithLabels.map((move) => {
           const isSelected = selectedMove === move.key
           const isChoosing = phase === "choosing"
           return (
@@ -874,12 +917,12 @@ export function GameArena() {
             </span>
           )}
         </div>
-        <span className="text-base text-white/70">{formatAmount(player.balance)} монет</span>
+        <span className="text-base text-white/70">{t("arenaBalanceLine", { amount: formatAmount(player.balance) })}</span>
       </div>
 
       {/* Надпись снизу */}
       <p className="text-center text-xs text-white/40 font-medium tracking-widest uppercase pb-6 pt-1">
-        Камень · Ножницы · Бумага
+        {t("arenaFooterMoves")}
       </p>
     </div>
   )

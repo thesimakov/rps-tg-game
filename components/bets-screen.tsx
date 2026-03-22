@@ -16,10 +16,12 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useI18n } from "@/lib/i18n/context"
 
 const now = () => Date.now()
 
 export function BetsScreen() {
+  const { t } = useI18n()
   const {
     bets,
     player,
@@ -37,6 +39,7 @@ export function BetsScreen() {
     purchaseLavaCard,
     toDisplayAmount,
     currencyLabel,
+    opponents,
   } = useGame()
   const [createOpen, setCreateOpen] = useState(false)
   const [lavaModalOpen, setLavaModalOpen] = useState(false)
@@ -78,9 +81,9 @@ export function BetsScreen() {
     }
     const botSlotsNeeded = Math.max(0, MIN_BETS_DISPLAY - liveBets.length)
     const botBetsToShow = sortedBots.slice(0, botSlotsNeeded)
-    const filler = getFillerBetEntries(botSlotsNeeded - botBetsToShow.length)
+    const filler = getFillerBetEntries(botSlotsNeeded - botBetsToShow.length, opponents)
     return [...liveBets, ...botBetsToShow, ...filler]
-  }, [visibleBets, pendingBet, player.id, player.name, player.avatar, player.avatarUrl, player.hideVkAvatar, player.wins, player.vip])
+  }, [visibleBets, pendingBet, player.id, player.name, player.avatar, player.avatarUrl, player.hideVkAvatar, player.wins, player.vip, opponents])
 
   const handleCreateBet = () => {
     const num = parseInt(amount, 10)
@@ -120,13 +123,13 @@ export function BetsScreen() {
         <button
           onClick={() => setScreen(platformUser ? "menu" : "entry")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
-          aria-label="Назад"
+          aria-label={t("commonBack")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-center text-base font-bold text-foreground uppercase tracking-wider flex items-center justify-center gap-2">
           <Trophy className="h-5 w-5 text-accent" />
-          Ставки
+          {t("betsScreenTitle")}
         </h1>
         <div className="w-9" />
       </div>
@@ -135,7 +138,7 @@ export function BetsScreen() {
       <div className="w-full max-w-lg mx-auto mb-4">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="h-4 w-4 text-amber-400" />
-          <span className="text-base font-bold text-foreground uppercase tracking-wide">Горячая новинка</span>
+          <span className="text-base font-bold text-foreground uppercase tracking-wide">{t("betsSidebarHot")}</span>
         </div>
         <button
           type="button"
@@ -146,8 +149,8 @@ export function BetsScreen() {
             <Flame className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-base font-bold text-foreground">Карта «Лава»</p>
-            <p className="text-xs text-muted-foreground">В наличии: {lavaCardStock} из 3</p>
+            <p className="text-base font-bold text-foreground">{t("betsScreenLavaTitle")}</p>
+            <p className="text-xs text-muted-foreground">{t("betsScreenLavaStock", { n: lavaCardStock })}</p>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <Coins className="h-5 w-5 text-amber-500" />
@@ -159,12 +162,12 @@ export function BetsScreen() {
       <div className="w-full max-w-lg mx-auto flex flex-col gap-4">
         {!platformUser && (
           <p className="text-sm text-center py-2 px-3 rounded-xl bg-primary/15 border border-primary/30 text-primary">
-            Войдите, чтобы создавать ставки и играть
+            {t("betsScreenLoginPrompt")}
           </p>
         )}
         {platformUser && pendingBet ? (
           <p className="text-sm text-muted-foreground text-center py-2">
-            У вас уже есть ставка. Нажмите на неё, чтобы изменить размер или удалить.
+            {t("betsScreenHasBet")}
           </p>
         ) : platformUser ? (
           <button
@@ -172,11 +175,11 @@ export function BetsScreen() {
             className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-accent/20 border border-accent/40 text-accent font-bold hover:bg-accent/30 transition-colors"
           >
             <Plus className="h-5 w-5" />
-            Создать ставку
+            {t("betsSidebarCreate")}
           </button>
         ) : null}
 
-        <p className="text-sm text-muted-foreground">Выберите ставку и пригласите в игру:</p>
+        <p className="text-sm text-muted-foreground">{t("betsScreenPickHint")}</p>
         <div className="flex flex-col gap-2">
           {displayBets.map((bet) => {
             const isMyBet = bet.creatorId === player.id
@@ -231,19 +234,19 @@ export function BetsScreen() {
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {isMyBet && (
                       <span className="text-[10px] font-bold uppercase tracking-wide text-primary bg-primary/20 px-1.5 py-0.5 rounded">
-                        Моя ставка
+                        {t("betsSidebarMyBet")}
                       </span>
                     )}
                     <span className="font-semibold text-base text-foreground">
-                      {isMyBet ? "Вы" : bet.creatorName}
+                      {isMyBet ? t("commonYou") : bet.creatorName}
                     </span>
                     {bet.vip && <Crown className="h-4 w-4 text-accent flex-shrink-0" />}
                     {!isMyBet && !bet.vip && <Star className="h-4 w-4 text-accent flex-shrink-0" />}
                     {isMyBet && (
-                      <span className="text-xs text-muted-foreground">· нажмите, чтобы изменить</span>
+                      <span className="text-xs text-muted-foreground">{t("betsScreenEditSuffix")}</span>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground">{bet.creatorWins} побед</span>
+                  <span className="text-xs text-muted-foreground">{t("betsSidebarInviteWins", { n: bet.creatorWins })}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Coins className="h-4 w-4 text-accent" />
@@ -261,13 +264,13 @@ export function BetsScreen() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Coins className="h-5 w-5 text-accent" />
-              Моя ставка
+              {t("betsSidebarMyBet")}
             </DialogTitle>
           </DialogHeader>
           {pendingBet && (
             <>
               <div className="space-y-3">
-                <Label htmlFor="edit-amount">Новый размер ({currencyLabel})</Label>
+                <Label htmlFor="edit-amount">{t("betsSidebarNewAmount", { currency: currencyLabel })}</Label>
                 <Input
                   id="edit-amount"
                   type="number"
@@ -278,16 +281,23 @@ export function BetsScreen() {
                   className="text-lg font-bold tabular-nums"
                 />
                 <p className="text-base text-muted-foreground">
-                  Сейчас: {formatAmount(toDisplayAmount(pendingBet.amount))} {currencyLabel}.{" "}
-                  {(() => {
-                    const raw = parseInt(editAmount || String(pendingBet.amount), 10)
-                    const bet = Number.isFinite(raw) && raw > 0 ? raw : pendingBet.amount
-                    const pot = bet * 2
-                    const winnings = pot
-                    const earningsIfWin = winnings - bet
-                    const balanceIfWin = player.balance + earningsIfWin
-                    return `Баланс при выигрыше: ${formatAmount(toDisplayAmount(balanceIfWin))} ${currencyLabel}`
-                  })()}
+                  {t("betsScreenCurrentStake", {
+                    amount: formatAmount(toDisplayAmount(pendingBet.amount)),
+                    currency: currencyLabel,
+                  })}{" "}
+                  {t("betsScreenBalanceIfWin", {
+                    amount: formatAmount(
+                      toDisplayAmount(
+                        (() => {
+                          const raw = parseInt(editAmount || String(pendingBet.amount), 10)
+                          const bet = Number.isFinite(raw) && raw > 0 ? raw : pendingBet.amount
+                          const earningsIfWin = bet * 2 - bet
+                          return player.balance + earningsIfWin
+                        })(),
+                      ),
+                    ),
+                    currency: currencyLabel,
+                  })}
                 </p>
               </div>
               <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -300,7 +310,7 @@ export function BetsScreen() {
                   }}
                 >
                   <Trash2 className="h-4 w-4 mr-1" />
-                  Удалить ставку
+                  {t("betsScreenDeleteBet")}
                 </Button>
                 <Button
                   onClick={() => {
@@ -311,7 +321,7 @@ export function BetsScreen() {
                   }}
                 >
                   <Pencil className="h-4 w-4 mr-1" />
-                  Изменить размер
+                  {t("betsScreenChangeSize")}
                 </Button>
               </DialogFooter>
             </>
@@ -325,20 +335,26 @@ export function BetsScreen() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wallet className="h-5 w-5 text-accent" />
-              Недостаточно средств
+              {t("betsSidebarNoFundsTitle")}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            У вас нет монет, чтобы поддержать ставку
-            {noMoneyBet ? ` (${formatAmount(toDisplayAmount(noMoneyBet.amount))} ${currencyLabel})` : ""}. Пополните баланс, чтобы принять участие в игре.
+            {t("betsSidebarNoFundsBody", {
+              amount: noMoneyBet
+                ? t("betsSidebarNoFundsAmount", {
+                    amount: formatAmount(toDisplayAmount(noMoneyBet.amount)),
+                    currency: currencyLabel,
+                  })
+                : "",
+            })}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNoMoneyBet(null)}>
-              Закрыть
+              {t("commonClose")}
             </Button>
             <Button onClick={() => { setNoMoneyBet(null); setScreen("shop") }}>
               <Coins className="h-4 w-4 mr-1" />
-              Пополнить баланс
+              {t("betsSidebarTopUp")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -348,7 +364,7 @@ export function BetsScreen() {
       <Dialog open={!!inviteBet} onOpenChange={(open) => !open && setInviteBet(null)}>
         <DialogContent className="sm:max-w-md bg-card border-border">
           <DialogHeader>
-            <DialogTitle>Пригласить в игру</DialogTitle>
+            <DialogTitle>{t("betsSidebarInviteTitle")}</DialogTitle>
           </DialogHeader>
           {inviteBet && (
             <>
@@ -377,18 +393,18 @@ export function BetsScreen() {
                 )}
                 <div>
                   <p className="font-semibold text-base text-foreground">{inviteBet.creatorName}</p>
-                  <p className="text-sm text-muted-foreground">{inviteBet.creatorWins} побед</p>
+                  <p className="text-sm text-muted-foreground">{t("betsSidebarInviteWins", { n: inviteBet.creatorWins })}</p>
                   <p className="text-base text-accent font-bold">{formatAmount(toDisplayAmount(inviteBet.amount))} {currencyLabel}</p>
                 </div>
               </div>
               <DialogFooter className="gap-2 sm:gap-0">
                 <Button variant="outline" onClick={() => setInviteBet(null)}>
                   <X className="h-4 w-4 mr-1" />
-                  Отклонить
+                  {t("commonDecline")}
                 </Button>
                 <Button onClick={() => handleInvite(inviteBet)}>
                   <UserPlus className="h-4 w-4 mr-1" />
-                  Пригласить
+                  {t("commonInvite")}
                 </Button>
               </DialogFooter>
             </>
@@ -399,13 +415,11 @@ export function BetsScreen() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md bg-card border-border">
           <DialogHeader>
-            <DialogTitle>Создать ставку</DialogTitle>
+            <DialogTitle>{t("betsSidebarCreateTitle")}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Укажите сумму ставки. Другие игроки смогут откликнуться и сыграть с вами.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("betsSidebarCreateBody")}</p>
           <div className="grid gap-2">
-            <Label htmlFor="bet-amount-mobile">Сумма ({currencyLabel})</Label>
+            <Label htmlFor="bet-amount-mobile">{t("betsSidebarAmountLabel", { currency: currencyLabel })}</Label>
             <Input
               id="bet-amount-mobile"
               type="number"
@@ -413,14 +427,16 @@ export function BetsScreen() {
               max={player.balance}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="Например 50"
+              placeholder={t("betsSidebarAmountPlaceholder")}
               className="bg-muted/30 border-border"
             />
             <p className="text-xs text-muted-foreground">
-              Баланс: <span className="font-semibold text-base text-accent">{formatAmount(toDisplayAmount(player.balance))}</span> {currencyLabel}
+              {t("betsSidebarBalancePrefix")}{" "}
+              <span className="font-semibold text-base text-accent">{formatAmount(toDisplayAmount(player.balance))}</span>{" "}
+              {currencyLabel}
             </p>
             <div className="grid gap-2 pt-2">
-              <Label>Держать ставку</Label>
+              <Label>{t("betsSidebarHoldLabel")}</Label>
               <div className="flex gap-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -430,7 +446,7 @@ export function BetsScreen() {
                     onChange={() => setDuration("once")}
                     className="rounded-full border-border"
                   />
-                  <span className="text-sm text-foreground">Разово</span>
+                  <span className="text-sm text-foreground">{t("betsSidebarOnce")}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -440,20 +456,20 @@ export function BetsScreen() {
                     onChange={() => setDuration("1h")}
                     className="rounded-full border-border"
                   />
-                  <span className="text-sm text-foreground">В течение часа</span>
+                  <span className="text-sm text-foreground">{t("betsSidebarOneHour")}</span>
                 </label>
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Отмена
+              {t("commonCancel")}
             </Button>
             <Button
               onClick={handleCreateBet}
               disabled={!amount || parseInt(amount, 10) < 1 || player.balance < parseInt(amount, 10)}
             >
-              Создать
+              {t("betsSidebarCreate")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -467,21 +483,19 @@ export function BetsScreen() {
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
                 <Flame className="h-4 w-4 text-white" />
               </div>
-              Карта «Лава»
+              {t("betsSidebarLavaTitle")}
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Карта уничтожает любую карту соперника. Можно использовать 5 раз. Рекомендуем при турнире.
-          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{t("betsSidebarLavaBody")}</p>
           <div className="flex items-center justify-between py-2">
-            <span className="text-sm text-muted-foreground">В наличии: {lavaCardStock} из 3</span>
+            <span className="text-sm text-muted-foreground">{t("betsSidebarLavaStock", { n: lavaCardStock })}</span>
             <span className="flex items-center gap-1 text-base text-amber-500 font-bold">
               <Coins className="h-4 w-4" /> {formatAmount(toDisplayAmount(120_000))} {currencyLabel}
             </span>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLavaModalOpen(false)}>
-              Закрыть
+              {t("commonClose")}
             </Button>
             <Button
               onClick={() => {
@@ -489,7 +503,7 @@ export function BetsScreen() {
               }}
               disabled={!canBuyLava}
             >
-              Купить
+              {t("commonBuy")}
             </Button>
           </DialogFooter>
         </DialogContent>

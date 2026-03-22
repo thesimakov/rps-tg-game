@@ -6,42 +6,51 @@ import { formatAmount } from "@/lib/format-amount"
 import { Trophy, Skull, Minus, Coins, RotateCcw, ArrowRight, Zap, Heart, Hammer, Scissors, FileText, Moon, Sun, Droplets, Gift } from "lucide-react"
 import { PlayerAvatar, VipBadgeOnFrame } from "@/components/player-avatar"
 import { useState, useEffect } from "react"
-
-const MOVE_LABELS: Record<string, { icon: string; label: string }> = {
-  rock: { icon: "\uD83E\uDEA8", label: "Камень" },
-  scissors: { icon: "\u2702\uFE0F", label: "Ножницы" },
-  paper: { icon: "\uD83D\uDCC4", label: "Бумага" },
-  water: { icon: "\uD83C\uDF0A", label: "Вода" },
-  fire: { icon: "\uD83D\uDD25", label: "Огонь" },
-}
+import { useI18n } from "@/lib/i18n/context"
+import type { Translate } from "@/lib/i18n/context"
 
 /** Текст исхода: что произошло (бумага обернула камень, ножницы порезали бумагу и т.д.) */
-function getOutcomePhrase(playerMove: string | null, opponentMove: string | null, outcome: string): string | null {
-  if (outcome === "draw") return "Одинаковый ход"
+function getOutcomePhrase(
+  t: Translate,
+  playerMove: string | null,
+  opponentMove: string | null,
+  outcome: string
+): string | null {
+  if (outcome === "draw") return t("outcomeDrawMove")
   const winner = outcome === "win" ? playerMove : opponentMove
   const loser = outcome === "win" ? opponentMove : playerMove
-  if (winner === "rock" && loser === "scissors") return "Камень разбил ножницы"
-  if (winner === "scissors" && loser === "paper") return "Ножницы порезали бумагу"
-  if (winner === "paper" && loser === "rock") return "Бумага обернула камень"
-  if (winner === "water" && loser === "rock") return "Вода размыла камень"
-  if (winner === "paper" && loser === "water") return "Бумага впитала воду"
-  if (winner === "fire" && loser === "rock") return "Огонь оплавил камень"
-  if (winner === "rock" && loser === "water") return "Камень рассекает поток"
-  if (winner === "water" && loser === "fire") return "Вода потушила огонь"
+  if (winner === "rock" && loser === "scissors") return t("outcomeRockCrushesScissors")
+  if (winner === "scissors" && loser === "paper") return t("outcomeScissorsCutPaper")
+  if (winner === "paper" && loser === "rock") return t("outcomePaperCoversRock")
+  if (winner === "water" && loser === "rock") return t("outcomeWaterErodesRock")
+  if (winner === "paper" && loser === "water") return t("outcomePaperSoaksWater")
+  if (winner === "fire" && loser === "rock") return t("outcomeFireMeltsRock")
+  if (winner === "rock" && loser === "water") return t("outcomeRockPartsWater")
+  if (winner === "water" && loser === "fire") return t("outcomeWaterExtinguishesFire")
   return null
 }
 
 /** Иконка исхода: кто кого победил — показываем победную комбинацию (молоток = камень бьёт ножницы, ножницы режут бумагу, бумага накрывает камень) */
-function OutcomeIcon({ playerMove, opponentMove, outcome }: { playerMove: string | null; opponentMove: string | null; outcome: string }) {
+function OutcomeIcon({
+  playerMove,
+  opponentMove,
+  outcome,
+  t,
+}: {
+  playerMove: string | null
+  opponentMove: string | null
+  outcome: string
+  t: Translate
+}) {
   if (outcome === "draw") return <Minus className="h-8 w-8 text-white/50" />
   const winner = outcome === "win" ? playerMove : opponentMove
   const loser = outcome === "win" ? opponentMove : playerMove
   const cls = "h-8 w-8 text-white/70"
-  if (winner === "rock" && loser === "scissors") return <Hammer className={cls} aria-label="Камень бьёт ножницы" />
-  if (winner === "scissors" && loser === "paper") return <Scissors className={cls} aria-label="Ножницы режут бумагу" />
-  if (winner === "paper" && loser === "rock") return <FileText className={cls} aria-label="Бумага накрывает камень" />
-  if (winner === "water" && loser === "rock") return <Droplets className={cls} aria-label="Вода размыла камень" />
-  if (winner === "paper" && loser === "water") return <FileText className={cls} aria-label="Бумага впитала воду" />
+  if (winner === "rock" && loser === "scissors") return <Hammer className={cls} aria-label={t("ariaRockBeatsScissors")} />
+  if (winner === "scissors" && loser === "paper") return <Scissors className={cls} aria-label={t("ariaScissorsCutPaper")} />
+  if (winner === "paper" && loser === "rock") return <FileText className={cls} aria-label={t("ariaPaperCoversRock")} />
+  if (winner === "water" && loser === "rock") return <Droplets className={cls} aria-label={t("ariaWaterErodesRock")} />
+  if (winner === "paper" && loser === "water") return <FileText className={cls} aria-label={t("ariaPaperSoaksWater")} />
   return <Minus className={cls} />
 }
 
@@ -93,6 +102,7 @@ function getLoseFxPosition(i: number) {
 }
 
 export function ResultScreen() {
+  const { t } = useI18n()
   const { lastResult, setScreen, opponent, player, totalRounds, currentBet, toDisplayAmount, currencyLabel } = useGame()
   const isWin = lastResult?.outcome === "win"
   const isDraw = lastResult?.outcome === "draw"
@@ -132,11 +142,9 @@ export function ResultScreen() {
   const bankAmount = lastResult.bet * 2
   const totalRating = player.ratingPoints ?? 0
 
-  const playerMoveInfo = lastResult.playerMove ? MOVE_LABELS[lastResult.playerMove] : { icon: "?", label: "?" }
-  const opponentMoveInfo = lastResult.opponentMove ? MOVE_LABELS[lastResult.opponentMove] : { icon: "?", label: "?" }
   const opponentData: Player = opponent ?? {
     id: "opponent",
-    name: "Соперник",
+    name: t("arenaOpponent"),
     avatar: "?",
     avatarUrl: "",
     balance: 0,
@@ -243,7 +251,7 @@ export function ResultScreen() {
           {/* Банк */}
           <div className="flex flex-col">
             <span className="text-base font-semibold text-white/95 uppercase tracking-wider">
-              Банк
+              {t("resultBank")}
             </span>
             <div className="mt-1 flex items-baseline gap-2">
               <Coins className="h-5 w-5 text-amber-400 flex-shrink-0" />
@@ -259,7 +267,7 @@ export function ResultScreen() {
           {/* Бонусы рейтинга */}
           <div className="flex flex-col items-center gap-0.5">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-white/70">
-              Бонусы
+              {t("resultBonuses")}
             </span>
             <div className="relative px-3 py-1 rounded-full border border-amber-400/50 bg-amber-500/20 min-w-[72px] flex items-center justify-center">
               <span className="text-sm font-bold text-amber-200 tabular-nums">
@@ -276,7 +284,7 @@ export function ResultScreen() {
           {/* Раунд */}
           <div className="flex flex-col items-end">
             <span className="text-base font-semibold text-white uppercase tracking-widest leading-none">
-              Раунд {totalRounds} из {totalRounds}
+              {t("resultRoundHeader", { total: totalRounds })}
             </span>
             <div className="mt-1 flex gap-1">
               {Array.from({ length: totalRounds }).map((_, i) => (
@@ -297,7 +305,7 @@ export function ResultScreen() {
             <Sun className="h-16 w-16 text-amber-300 drop-shadow-lg" strokeWidth={1.5} />
           </div>
           <h1 className="result-title-in text-base font-black uppercase tracking-wide text-amber-200/95 mb-2" style={{ animationDelay: "0.1s" }}>
-            Кто-то уснул
+            {t("resultSomeoneSleptTitle")}
           </h1>
           <div className="flex items-end gap-1 mb-4" style={{ minHeight: "2.5rem" }}>
             <span className="asleep-zzz asleep-zzz-delay-1 text-3xl sm:text-4xl font-black text-white/90">Z</span>
@@ -305,7 +313,7 @@ export function ResultScreen() {
             <span className="asleep-zzz asleep-zzz-delay-3 text-2xl sm:text-3xl font-black text-white/80">z</span>
           </div>
           <p className="text-white/80 text-sm sm:text-base text-center max-w-xs mb-6 leading-relaxed">
-            Один из игроков не успел выбрать карту. Его ставка переходит тому, кто выбрал.
+            {t("resultSomeoneSleptBody")}
           </p>
         </>
       ) : (
@@ -326,7 +334,7 @@ export function ResultScreen() {
             }`}
             style={{ animationDelay: "0.25s" }}
           >
-            {isWin ? "Победа" : isDraw ? "Ничья" : "Поражение"}
+            {isWin ? t("outcomeWinShort") : isDraw ? t("outcomeDrawShort") : t("outcomeLossShort")}
           </h1>
         </div>
       </div>
@@ -336,7 +344,7 @@ export function ResultScreen() {
         <div className="flex flex-col items-center gap-2 mb-3 w-full max-w-lg mx-auto">
           <div className="flex flex-col items-center gap-1">
             <span className="text-[13px] uppercase tracking-wide text-white/60">
-              Все ходы в матче
+              {t("resultAllMoves")}
             </span>
           </div>
 
@@ -559,9 +567,10 @@ export function ResultScreen() {
             playerMove={lastResult.playerMove}
             opponentMove={lastResult.opponentMove}
             outcome={lastResult.outcome}
+            t={t}
           />
           <p className="text-xs sm:text-sm text-white/80 text-center font-medium max-w-[160px] leading-tight">
-            {getOutcomePhrase(lastResult.playerMove, lastResult.opponentMove, lastResult.outcome) ?? ""}
+            {getOutcomePhrase(t, lastResult.playerMove, lastResult.opponentMove, lastResult.outcome) ?? ""}
           </p>
         </div>
 
@@ -621,14 +630,20 @@ export function ResultScreen() {
         </div>
         <p className="text-xs text-white/70">
           {lastResult.earnings > 0
-            ? `Вы выиграли ${formatAmount(toDisplayAmount(lastResult.earnings))} ${currencyLabel}`
+            ? t("resultYouWon", {
+                amount: formatAmount(toDisplayAmount(lastResult.earnings)),
+                currency: currencyLabel,
+              })
             : lastResult.earnings < 0
-              ? `Вы проиграли ${formatAmount(toDisplayAmount(Math.abs(lastResult.earnings)))} ${currencyLabel}`
-              : "Ничья — баланс не изменился"}
+              ? t("resultYouLost", {
+                  amount: formatAmount(toDisplayAmount(Math.abs(lastResult.earnings))),
+                  currency: currencyLabel,
+                })
+              : t("resultDrawBalance")}
         </p>
         {stakeMultiplier > 1 && (
           <span className="mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
-            Множитель ставки: x{stakeMultiplier}
+            {t("resultStakeMult", { n: stakeMultiplier })}
           </span>
         )}
       </div>
@@ -642,7 +657,7 @@ export function ResultScreen() {
             style={{ animationDelay: "0.72s" }}
           >
             <Gift className="h-5 w-5" />
-            <span>Открыть сундук босса</span>
+            <span>{t("resultOpenBossChest")}</span>
           </button>
         )}
         <button
@@ -651,7 +666,7 @@ export function ResultScreen() {
           style={{ animationDelay: "0.8s" }}
         >
           <RotateCcw className="h-5 w-5" />
-          <span>Реванш</span>
+          <span>{t("resultRematch")}</span>
         </button>
         <button
           onClick={() => setScreen("bet-select")}
@@ -659,7 +674,7 @@ export function ResultScreen() {
           style={{ animationDelay: "0.95s" }}
         >
           <ArrowRight className="h-5 w-5" />
-          <span>Закончить игру</span>
+          <span>{t("resultEndGame")}</span>
         </button>
       </div>
       </div>

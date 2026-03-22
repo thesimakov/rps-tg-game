@@ -6,6 +6,7 @@ import { useGame } from "@/lib/game-context"
 import { formatAmount } from "@/lib/format-amount"
 import { isMiniAppEnvironment, showFriendsPicker, type Friend } from "@/lib/platform-bridge"
 import { ArrowLeft, Users, Crown, Plus, X, Coins, Sword } from "lucide-react"
+import { useI18n } from "@/lib/i18n/context"
 
 interface TableSeat {
   id: string
@@ -65,6 +66,7 @@ function runTournament(totalPlayers: number, hostIndex: number): number {
 }
 
 export function FriendsTableScreen() {
+  const { t } = useI18n()
   const { player, setPlayer, setScreen, toDisplayAmount, currencyLabel } = useGame()
   const [bet, setBet] = useState(10)
   const [seats, setSeats] = useState<(TableSeat | null)[]>(() => {
@@ -92,7 +94,7 @@ export function FriendsTableScreen() {
         const num = prev.filter(Boolean).length
         copy[index] = {
           id: `local_${Date.now()}_${index}`,
-          name: `Друг ${num}`,
+          name: t("friendsTableFriend", { n: num }),
         }
         return copy
       })
@@ -157,15 +159,19 @@ export function FriendsTableScreen() {
 
       if (winnerIsHost) {
         setResultText(
-          `Вы выиграли турнир за столом! Плюс ${formatAmount(toDisplayAmount(earnings))} ${currencyLabel} и ${
-            bonus
-          } бонусов.`
+          t("friendsTableYouWon", {
+            amount: formatAmount(toDisplayAmount(earnings)),
+            currency: currencyLabel,
+            bonus,
+          })
         )
       } else {
         setResultText(
-          `${winner?.name || "Игрок"} победил в турнире. Вы потеряли ${formatAmount(
-            toDisplayAmount(-earnings)
-          )} ${currencyLabel}.`
+          t("friendsTableOtherWon", {
+            name: winner?.name || t("playerDefaultName"),
+            amount: formatAmount(toDisplayAmount(-earnings)),
+            currency: currencyLabel,
+          })
         )
       }
     } finally {
@@ -192,13 +198,13 @@ export function FriendsTableScreen() {
         <button
           onClick={() => setScreen("menu")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
-          aria-label="Назад"
+          aria-label={t("commonBack")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-center text-base font-bold text-foreground uppercase tracking-wider flex items-center justify-center gap-2">
           <Users className="h-5 w-5" />
-          За стол с друзьями
+          {t("friendsTableTitle")}
         </h1>
         <div className="w-9" />
       </div>
@@ -208,7 +214,7 @@ export function FriendsTableScreen() {
         <div className="absolute inset-6 rounded-full bg-card/60 border border-border/40 shadow-lg" />
         <div className="absolute inset-16 rounded-full bg-background/60 border border-border/40 flex items-center justify-center">
           <span className="text-xs text-muted-foreground text-center px-4">
-            До 9 игроков. Добавьте друзей по кругу и нажмите «Играем», чтобы запустить турнир.
+            {t("friendsTableSubtitle")}
           </span>
         </div>
 
@@ -251,7 +257,7 @@ export function FriendsTableScreen() {
 
       {/* Ставка и инфо */}
       <div className="w-full max-w-lg mb-4">
-        <label className="text-sm font-bold text-foreground mb-2 block">Ставка ({currencyLabel})</label>
+        <label className="text-sm font-bold text-foreground mb-2 block">{t("friendsTableStake", { currency: currencyLabel })}</label>
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <input
@@ -265,14 +271,14 @@ export function FriendsTableScreen() {
             <Coins className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
           </div>
           <div className="px-3 py-2 rounded-2xl bg-card/60 border border-border/40 text-xs text-muted-foreground">
-            Банк:{" "}
+            {t("friendsTableBank")}{" "}
             <span className="font-bold text-foreground">
               {formatAmount(toDisplayAmount(bet * 2))} {currencyLabel}
             </span>
           </div>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          Без комиссии с банка. Победитель турнира получает полный выигрыш, как в обычной игре.
+          {t("friendsTableNoFee")}
         </p>
       </div>
 
@@ -288,11 +294,11 @@ export function FriendsTableScreen() {
         }`}
       >
         <Sword className="h-5 w-5" />
-        Играем
+        {t("friendsTablePlay")}
       </button>
 
       <p className="mt-2 text-xs text-muted-foreground text-center max-w-lg">
-        Для начала турнира нужно 9 игроков за столом и достаточный баланс для ставки.
+        {t("friendsTableNeed9")}
       </p>
 
       {resultText && (

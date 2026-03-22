@@ -2,11 +2,21 @@
 
 import { useState } from "react"
 import { AdminStandaloneScreen } from "@/components/admin-standalone-screen"
+import { I18nProvider, useI18n } from "@/lib/i18n/context"
 
 const EXPECTED_LOGIN = "admin-lemnity"
 const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN
 
 export default function AdminLemnityPage() {
+  return (
+    <I18nProvider>
+      <AdminLemnityLogin />
+    </I18nProvider>
+  )
+}
+
+function AdminLemnityLogin() {
+  const { t } = useI18n()
   const [login, setLogin] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -16,11 +26,11 @@ export default function AdminLemnityPage() {
     e.preventDefault()
     setError(null)
     if (!ADMIN_TOKEN) {
-      setError("Админ‑токен не настроен. Установите NEXT_PUBLIC_ADMIN_TOKEN и ADMIN_SECRET на сервере.")
+      setError(t("adminLemnityTokenMissing"))
       return
     }
     if (login !== EXPECTED_LOGIN || password !== ADMIN_TOKEN) {
-      setError("Неверный логин или пароль.")
+      setError(t("adminLemnityBadCreds"))
       return
     }
     setAuthed(true)
@@ -36,7 +46,7 @@ export default function AdminLemnityPage() {
         <div>
           <h1 className="text-lg font-bold text-white text-center">Admin Lemnity</h1>
           <p className="mt-1 text-xs text-slate-300 text-center">
-            Вход только для разработчиков. Введите логин и пароль.
+            {t("adminLemnityOnlyDevs")}
           </p>
         </div>
         {error && (
@@ -46,7 +56,7 @@ export default function AdminLemnityPage() {
         )}
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-slate-200">Логин</label>
+            <label className="block text-xs font-medium text-slate-200">{t("adminLemnityLoginLabel")}</label>
             <input
               type="text"
               value={login}
@@ -56,7 +66,7 @@ export default function AdminLemnityPage() {
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-slate-200">Пароль</label>
+            <label className="block text-xs font-medium text-slate-200">{t("adminLemnityPasswordLabel")}</label>
             <input
               type="password"
               value={password}
@@ -68,11 +78,10 @@ export default function AdminLemnityPage() {
             type="submit"
             className="mt-2 w-full py-2.5 rounded-2xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 transition-colors"
           >
-            Войти
+            {t("adminLemnitySignIn")}
           </button>
         </form>
       </div>
     </div>
   )
 }
-

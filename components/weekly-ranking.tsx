@@ -4,8 +4,10 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { useGame } from "@/lib/game-context"
 import { AvatarImageOrLetter, VipBadgeOnFrame } from "@/components/player-avatar"
 import { Trophy, Crown, ArrowUp, ArrowDown } from "lucide-react"
+import { useI18n } from "@/lib/i18n/context"
 
 export function WeeklyRanking() {
+  const { t } = useI18n()
   const { leaderboard, playerRank, rankTrend, setScreen, leaderboardVersion, purchaseRankBoost, player } = useGame()
   const [justUpdated, setJustUpdated] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -86,7 +88,7 @@ export function WeeklyRanking() {
           <div className="flex items-center gap-2">
             <Crown className="h-5 w-5 text-amber-200" />
             <span className="text-xs font-extrabold uppercase tracking-wide text-amber-50">
-              Турнир сезона
+              {t("weeklySeasonTournament")}
             </span>
           </div>
           <button
@@ -94,15 +96,15 @@ export function WeeklyRanking() {
             disabled
             className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-300 text-amber-950 border border-amber-400 cursor-default"
           >
-            Скоро
+            {t("weeklySoon")}
           </button>
         </div>
         <div className="flex items-baseline justify-between mt-1">
           <span className="text-[11px] uppercase tracking-wide text-amber-100/90 font-semibold">
-            Банк турнира
+            {t("weeklySeasonBank")}
           </span>
           <span className="text-sm font-extrabold text-amber-100 tabular-nums">
-            {seasonBank} монет
+            {t("referralCoins", { amount: seasonBank })}
           </span>
         </div>
       </div>
@@ -113,7 +115,7 @@ export function WeeklyRanking() {
       >
         <Trophy className="h-4 w-4 text-accent" />
         <span className="font-bold text-base text-foreground tracking-wide uppercase">
-          Топ недели
+          {t("weeklyTopWeek")}
         </span>
       </button>
 
@@ -122,10 +124,10 @@ export function WeeklyRanking() {
       {/* Заголовок столбцов */}
       <div className="flex items-center justify-between px-1 pb-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-          Игрок
+          {t("weeklyColPlayer")}
         </span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-          Получено
+          {t("weeklyColEarned")}
         </span>
       </div>
 
@@ -186,12 +188,12 @@ export function WeeklyRanking() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
                   <span className={`text-base font-semibold truncate ${entry.isPlayer ? "text-primary" : "text-foreground"}`}>
-                    {entry.isPlayer ? "Вы" : entry.name}
+                    {entry.isPlayer ? t("commonYou") : entry.name}
                   </span>
                   {entry.vip && <Crown className="h-3 w-3 text-accent flex-shrink-0" />}
                 </div>
               <span className="text-[10px] text-muted-foreground transition-all duration-300">
-                {entry.wins} {"побед"}
+                {entry.wins === 1 ? t("weeklyWinsOne", { n: entry.wins }) : t("weeklyWinsMany", { n: entry.wins })}
               </span>
               </div>
 
@@ -219,7 +221,7 @@ export function WeeklyRanking() {
           </div>
           <div className="flex-1 min-w-0 flex flex-col">
             <div className="flex items-center gap-1">
-              <span className="text-[11px] font-semibold text-foreground">Ваше место</span>
+              <span className="text-[11px] font-semibold text-foreground">{t("weeklyYourRank")}</span>
               {rankTrend === "up" && (
                 <ArrowUp className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" aria-hidden />
               )}
@@ -228,7 +230,7 @@ export function WeeklyRanking() {
               )}
             </div>
             <span className="text-[10px] text-primary">
-              {winsLabel} {winsLabel === 1 ? "победа" : winsLabel >= 2 && winsLabel <= 4 ? "победы" : "побед"}
+              {winsLabel === 1 ? t("weeklyWinsOne", { n: winsLabel }) : t("weeklyWinsMany", { n: winsLabel })}
             </span>
           </div>
           <span className="text-base font-extrabold text-accent tabular-nums flex-shrink-0 transition-all duration-300">
@@ -243,17 +245,17 @@ export function WeeklyRanking() {
         disabled={!canBuyBoost}
         className="w-full py-2.5 rounded-xl text-sm font-bold bg-accent text-accent-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity text-center"
       >
-        Увеличить рейтинг
+        {t("weeklyBoostTitle")}
       </button>
       <p className="text-[10px] text-muted-foreground text-center px-1">
-        +100 рейтинга за 250 монет (уровень не меняется)
+        {t("weeklyBoostBody")}
       </p>
 
       <button
         onClick={() => setScreen("leaderboard")}
         className="py-2 rounded-xl text-[11px] font-semibold text-primary hover:bg-primary/8 transition-colors text-center"
       >
-        {"Весь рейтинг \u2192"}
+        {t("weeklyFullRanking")}
       </button>
     </div>
   )

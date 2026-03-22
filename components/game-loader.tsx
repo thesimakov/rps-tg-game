@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
+import { useI18n } from "@/lib/i18n/context"
 
 export function GameLoader({ stage, progress }: { stage?: string; progress?: number }) {
+  const { t } = useI18n()
   const targetPercent = Math.max(0, Math.min(100, progress ?? 0))
   const [animatedPercent, setAnimatedPercent] = useState(0)
 
@@ -39,7 +41,7 @@ export function GameLoader({ stage, progress }: { stage?: string; progress?: num
         <div className="relative h-44 w-44 sm:h-48 sm:w-48 animate-pulse">
           <Image
             src="/logo.webp"
-            alt="Логотип игры"
+            alt={t("loaderLogoAlt")}
             fill
             className="object-contain drop-shadow-[0_0_20px_rgba(34,211,238,0.65)]"
             priority
@@ -58,7 +60,7 @@ export function GameLoader({ stage, progress }: { stage?: string; progress?: num
           />
         </div>
         <div className="mt-1 flex items-center justify-center gap-3">
-          <div className="rps-loader-text mt-0">ЗАГРУЗКА АРЕНЫ</div>
+          <div className="rps-loader-text mt-0">{t("loaderArena")}</div>
           <div className="text-[11px] font-semibold text-white/80">{displayPercent}%</div>
         </div>
         {stage ? <div className="mt-2 text-center text-xs text-white/75">{stage}</div> : null}

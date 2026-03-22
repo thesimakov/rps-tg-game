@@ -1,14 +1,25 @@
 "use client"
 
 import { useGame } from "@/lib/game-context"
-import { LEVELS, LEVEL_STEP_XP, MAX_LEVEL, getDailyBonusPercent, getLevelFromXp, getLevelMeta, getRankBoostExtra, getShopDiscountPercent } from "@/lib/level-system"
+import {
+  LEVEL_STEP_XP,
+  MAX_LEVEL,
+  getDailyBonusPercent,
+  getLevelFromXp,
+  getLevelMeta,
+  getLevelMetaForLevel,
+  getRankBoostExtra,
+  getShopDiscountPercent,
+} from "@/lib/level-system"
+import { useI18n } from "@/lib/i18n/context"
 import { ArrowLeft, CheckCircle2, CircleDot, Lock } from "lucide-react"
 
 export function LevelsScreen() {
+  const { t, locale } = useI18n()
   const { player, setScreen } = useGame()
   const levelXp = player.levelXp ?? 0
   const currentLevel = getLevelFromXp(levelXp)
-  const levelMeta = getLevelMeta(levelXp)
+  const levelMeta = getLevelMeta(levelXp, locale)
   const xpInLevel = levelXp >= MAX_LEVEL * LEVEL_STEP_XP ? LEVEL_STEP_XP : levelXp % LEVEL_STEP_XP
 
   return (
@@ -17,18 +28,16 @@ export function LevelsScreen() {
         <button
           onClick={() => setScreen("menu")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
-          aria-label="Назад"
+          aria-label={t("commonBack")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="flex-1 text-center text-base font-bold text-foreground uppercase tracking-wider">
-          Уровни
-        </h1>
+        <h1 className="flex-1 text-center text-base font-bold text-foreground uppercase tracking-wider">{t("levelsTitle")}</h1>
         <div className="w-9" />
       </div>
 
       <div className="w-full max-w-lg rounded-3xl border border-cyan-300/30 bg-gradient-to-br from-cyan-500/14 via-card/55 to-indigo-500/10 p-5">
-        <p className="text-sm text-white/80">Текущий уровень</p>
+        <p className="text-sm text-white/80">{t("levelsCurrentLevel")}</p>
         <p className="mt-1 text-xl font-extrabold text-white">
           {levelMeta.name} ({currentLevel}/{MAX_LEVEL})
         </p>
@@ -46,13 +55,17 @@ export function LevelsScreen() {
 
       <div className="w-full max-w-lg mt-4 rounded-2xl border border-border/35 bg-card/35 p-4">
         <p className="text-xs text-muted-foreground">
-          Активные бонусы сейчас: ежедневка +{getDailyBonusPercent(levelXp)}%, скидка магазина {getShopDiscountPercent(levelXp)}%,
-          буст рейтинга +{getRankBoostExtra(levelXp)}.
+          {t("levelsBonusesNow", {
+            daily: getDailyBonusPercent(levelXp),
+            shop: getShopDiscountPercent(levelXp),
+            rank: getRankBoostExtra(levelXp),
+          })}
         </p>
       </div>
 
       <div className="w-full max-w-lg mt-4 space-y-2.5">
-        {LEVELS.map((level) => {
+        {Array.from({ length: MAX_LEVEL }, (_, i) => i + 1).map((lvl) => {
+          const level = getLevelMetaForLevel(lvl, locale)
           const reached = level.level < currentLevel
           const current = level.level === currentLevel
           return (
@@ -80,7 +93,7 @@ export function LevelsScreen() {
                   </span>
                 </div>
                 <span className="text-[11px] text-muted-foreground">
-                  {reached ? "Открыт" : current ? "Текущий" : "Закрыт"}
+                  {reached ? t("levelsStatusOpen") : current ? t("levelsStatusCurrent") : t("levelsStatusLocked")}
                 </span>
               </div>
               <p className="mt-1.5 text-xs text-muted-foreground">{level.perk}</p>

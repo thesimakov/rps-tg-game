@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import type { StoredPlayer } from "@/lib/player-store"
 import { ShieldAlert, ShieldCheck, RefreshCcw, Search } from "lucide-react"
 import { AdminPaymentsPanel } from "@/components/admin-payments-panel"
+import { useI18n } from "@/lib/i18n/context"
 
 interface AdminPlayer extends StoredPlayer {}
 
@@ -34,6 +35,7 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T | nul
 }
 
 export function AdminStandaloneScreen() {
+  const { t } = useI18n()
   const [players, setPlayers] = useState<AdminPlayer[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -46,11 +48,11 @@ export function AdminStandaloneScreen() {
     const res = await fetchJSON<ListResponse>("/api/admin/players/list")
     setIsLoading(false)
     if (!res) {
-      setError("Не удалось загрузить список игроков.")
+      setError(t("adminErrList"))
       return
     }
     if (!res.ok || !res.players) {
-      setError(res.error === "forbidden" ? "Нет доступа к админке (проверьте ADMIN_SECRET/NEXT_PUBLIC_ADMIN_TOKEN)." : "Ошибка при загрузке игроков.")
+      setError(res.error === "forbidden" ? t("adminErrList403") : t("adminErrList"))
       return
     }
     setPlayers(res.players)
@@ -82,7 +84,7 @@ export function AdminStandaloneScreen() {
     })
     setIsBusyId(null)
     if (!res || !res.ok || !res.player) {
-      setError("Не удалось выполнить действие над игроком.")
+      setError(t("adminErrAction"))
       return
     }
     setPlayers((prev) => prev.map((p) => (p.id === id ? res.player! : p)))
@@ -97,7 +99,7 @@ export function AdminStandaloneScreen() {
     })
     setIsBusyId(null)
     if (!res || !res.ok) {
-      setError("Не удалось удалить игрока.")
+      setError(t("adminErrDelete"))
       return
     }
     setPlayers((prev) => prev.filter((p) => p.id !== id))
@@ -110,7 +112,7 @@ export function AdminStandaloneScreen() {
       body: JSON.stringify({}),
     })
     if (!res || !res.ok) {
-      setError("Не удалось создать резервную копию.")
+      setError(t("adminErrBackup"))
       return
     }
   }
@@ -118,7 +120,7 @@ export function AdminStandaloneScreen() {
   const renderStatus = (p: AdminPlayer) => {
     const status = p.status ?? "active"
     if (status === "blocked") {
-      return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-300">Заблокирован</span>
+      return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-300">{t("adminStatusBlocked")}</span>
     }
     if (status === "banned") {
       const now = Date.now()
@@ -127,11 +129,11 @@ export function AdminStandaloneScreen() {
       const remainingH = Math.max(0, Math.ceil(remainingMs / (60 * 60 * 1000)))
       return (
         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-200">
-          Бан {remainingH > 0 ? `~${remainingH} ч` : "истёк"}
+          {remainingH > 0 ? t("adminStatusBan", { hours: remainingH }) : t("adminStatusBanExpired")}
         </span>
       )
     }
-    return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-200">Активен</span>
+    return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-200">{t("adminStatusActive")}</span>
   }
 
   return (
@@ -141,10 +143,10 @@ export function AdminStandaloneScreen() {
           <div>
             <h1 className="text-lg font-bold text-white flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-emerald-400" />
-              Админка: игроки
+              {t("adminTitle")}
             </h1>
             <p className="text-xs text-white/60 mt-0.5">
-              Только для разработчиков. Здесь можно смотреть список игроков и блокировать/банить.
+              {t("adminSubtitle")}
             </p>
           </div>
         </div>
@@ -155,7 +157,7 @@ export function AdminStandaloneScreen() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Поиск по ID или имени"
+              placeholder={t("adminSearchPlaceholder")}
               className="flex-1 bg-transparent text-xs text-white outline-none placeholder:text-slate-500"
             />
           </div>
@@ -166,7 +168,7 @@ export function AdminStandaloneScreen() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800 text-xs text-white hover:bg-slate-700 border border-slate-600"
             >
               <RefreshCcw className="h-3.5 w-3.5" />
-              Обновить
+              {t("commonRefresh")}
             </button>
             <button
               type="button"
@@ -174,7 +176,7 @@ export function AdminStandaloneScreen() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600/80 text-xs text-white hover:bg-emerald-500 border border-emerald-500/70"
             >
               <ShieldAlert className="h-3.5 w-3.5" />
-              Бэкап
+              {t("adminBackup")}
             </button>
           </div>
         </div>
@@ -191,25 +193,25 @@ export function AdminStandaloneScreen() {
               <thead className="bg-slate-900/90 sticky top-0 z-10">
                 <tr>
                   <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">ID</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">Имя</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">Баланс</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">{t("adminColName")}</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">{t("adminColBalance")}</th>
                   <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">W/L</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">Статус</th>
-                  <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">Действия</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">{t("adminColStatus")}</th>
+                  <th className="px-3 py-2 text-left font-semibold text-slate-300 whitespace-nowrap">{t("adminColActions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && (
                   <tr>
                     <td colSpan={6} className="px-3 py-4 text-center text-slate-400">
-                      Загрузка игроков...
+                      {t("adminLoading")}
                     </td>
                   </tr>
                 )}
                 {!isLoading && filteredPlayers.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-3 py-4 text-center text-slate-400">
-                      Игроки не найдены.
+                      {t("adminEmpty")}
                     </td>
                   </tr>
                 )}
@@ -235,7 +237,7 @@ export function AdminStandaloneScreen() {
                             onClick={() => void handleAction(p.id, "ban")}
                             className="px-2 py-1 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/50 hover:bg-amber-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
                           >
-                            Бан 24ч
+                            {t("adminBan24")}
                           </button>
                           <button
                             type="button"
@@ -243,7 +245,7 @@ export function AdminStandaloneScreen() {
                             onClick={() => void handleDelete(p.id)}
                             className="px-2 py-1 rounded-full bg-red-600/25 text-red-100 border border-red-500/70 hover:bg-red-600/35 disabled:opacity-60 disabled:cursor-not-allowed"
                           >
-                            Удалить
+                            {t("adminDelete")}
                           </button>
                         </div>
                       </td>

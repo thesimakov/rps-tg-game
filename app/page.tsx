@@ -1,6 +1,7 @@
 "use client"
 
 import { GameProvider, useGame } from "@/lib/game-context"
+import { I18nProvider, useI18n } from "@/lib/i18n/context"
 import { useEffect, useState } from "react"
 import type { CSSProperties } from "react"
 import { showFriendsPicker } from "@/lib/platform-bridge"
@@ -51,6 +52,7 @@ function GameScreen() {
 }
 
 function GameLayout() {
+  const { t } = useI18n()
   const { screen, platformUser, player, setPlayer, isLoading, loadingStage, loadingProgress } = useGame()
   const [hideLowBalanceHint, setHideLowBalanceHint] = useState(false)
   const [showLoader, setShowLoader] = useState(true)
@@ -69,7 +71,7 @@ function GameLayout() {
       <div className="relative min-h-screen">
         <ParticlesBg />
         <GameLoader
-          stage={isLoading ? loadingStage : "Запуск игры..."}
+          stage={isLoading ? loadingStage : t("loaderLaunching")}
           progress={isLoading ? loadingProgress : 100}
         />
       </div>
@@ -106,15 +108,13 @@ function GameLayout() {
         <div className="pointer-events-none fixed inset-x-0 top-4 z-40 flex justify-center">
           <div className="pointer-events-auto max-w-lg mx-auto rounded-2xl bg-slate-900/95 border border-amber-400/60 px-4 py-3 shadow-xl flex items-center gap-3">
             <div className="flex-1">
-              <p className="text-xs sm:text-sm text-white/90 leading-snug">
-                Добавь друга, получи за него 10 монет. Чем больше друзей зашли, тем больше монет получи.
-              </p>
+              <p className="text-xs sm:text-sm text-white/90 leading-snug">{t("pageLowBalanceHint")}</p>
               <button
                 type="button"
                 onClick={handleLowBalanceInvite}
                 className="mt-2 inline-flex items-center justify-center rounded-full bg-amber-400 text-amber-950 px-3 py-1 text-[11px] font-bold uppercase tracking-wide hover:bg-amber-300 transition-colors"
               >
-                Добавить друзей
+                {t("pageLowBalanceAddFriends")}
               </button>
             </div>
             <button
@@ -122,7 +122,7 @@ function GameLayout() {
               className="ml-2 text-xs text-amber-300 hover:text-amber-100"
               onClick={() => setHideLowBalanceHint(true)}
             >
-              Закрыть
+              {t("pageLowBalanceClose")}
             </button>
           </div>
         </div>
@@ -179,10 +179,12 @@ export default function Page() {
   }
 
   return (
-    <GameProvider>
-      <div style={styleVars}>
-        <GameLayout />
-      </div>
-    </GameProvider>
+    <I18nProvider>
+      <GameProvider>
+        <div style={styleVars}>
+          <GameLayout />
+        </div>
+      </GameProvider>
+    </I18nProvider>
   )
 }

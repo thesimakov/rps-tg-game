@@ -4,6 +4,7 @@ import { useGame } from "@/lib/game-context"
 import { formatAmount } from "@/lib/format-amount"
 import { ArrowLeft, Trophy, Crown, Medal } from "lucide-react"
 import { VipBadgeOnFrame } from "@/components/player-avatar"
+import { useI18n } from "@/lib/i18n/context"
 
 function getMedalStyle(rank: number) {
   if (rank === 1) return "bg-accent/20 text-accent border border-accent/30"
@@ -20,6 +21,7 @@ function getRowStyle(rank: number, isPlayer: boolean) {
 }
 
 export function LeaderboardScreen() {
+  const { t } = useI18n()
   const { setScreen, leaderboard, playerRank, player, platformUser } = useGame()
 
   const top10 = leaderboard.slice(0, 10)
@@ -31,13 +33,13 @@ export function LeaderboardScreen() {
         <button
           onClick={() => setScreen(platformUser ? "menu" : "entry")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
-          aria-label="Назад"
+          aria-label={t("commonBack")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-center text-base font-bold text-foreground flex items-center justify-center gap-2 uppercase tracking-wider">
           <Trophy className="h-5 w-5 text-accent" />
-          ТОП-10 Недели
+          {t("leaderboardTitle")}
         </h1>
         <div className="w-9" />
       </div>
@@ -46,21 +48,21 @@ export function LeaderboardScreen() {
       <div className="w-full max-w-lg mb-4 bg-primary/8 border border-primary/25 rounded-2xl px-4 py-3 flex items-center justify-between backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <Medal className="h-5 w-5 text-primary" />
-          <span className="text-base font-semibold text-foreground">Ваше место в рейтинге</span>
+          <span className="text-base font-semibold text-foreground">{t("leaderboardYourPlace")}</span>
         </div>
         <span className="text-base font-extrabold text-primary">#{playerRank}</span>
       </div>
 
       <p className="text-xs text-muted-foreground mb-4 font-medium">
-        {"Обновление каждый понедельник в 00:00"}
+        {t("weeklyResetHint")}
       </p>
 
       {/* Leaderboard */}
       <div className="w-full max-w-lg flex flex-col gap-2">
         {/* Заголовок столбцов */}
         <div className="flex items-center justify-between px-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-          <span>Игрок</span>
-          <span>Бонусы</span>
+          <span>{t("leaderboardColPlayer")}</span>
+          <span>{t("leaderboardColBonuses")}</span>
         </div>
         {top10.map((entry) => (
           <div
@@ -136,12 +138,12 @@ export function LeaderboardScreen() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className={`text-base font-semibold truncate ${entry.isPlayer ? "text-primary" : "text-foreground"}`}>
-                  {entry.isPlayer ? "Вы" : entry.name}
+                  {entry.isPlayer ? t("commonYou") : entry.name}
                 </span>
                 {entry.vip && <Crown className="h-3.5 w-3.5 text-accent flex-shrink-0" />}
               </div>
               <span className="text-xs text-muted-foreground">
-                {entry.wins} {"побед"}
+                {entry.wins === 1 ? t("weeklyWinsOne", { n: entry.wins }) : t("weeklyWinsMany", { n: entry.wins })}
               </span>
             </div>
 
@@ -159,13 +161,13 @@ export function LeaderboardScreen() {
       <div className="w-full max-w-lg mt-6 bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4">
         <h3 className="text-base font-bold text-foreground mb-3 flex items-center gap-2 uppercase tracking-wide">
           <Crown className="h-4 w-4 text-accent" />
-          Награды
+          {t("leaderboardRewards")}
         </h3>
         <div className="grid grid-cols-2 gap-2 text-base text-muted-foreground font-medium">
-          <span>{"1 место → "}{formatAmount(200)}{" монет"}</span>
-          <span>{"2 место → "}{formatAmount(100)}{" монет"}</span>
-          <span>{"3 место → "}{formatAmount(50)}{" монет"}</span>
-          <span>{"4-10 место → "}{formatAmount(10)}{" монет"}</span>
+          <span>{t("leaderboardReward1", { amount: formatAmount(200) })}</span>
+          <span>{t("leaderboardReward2", { amount: formatAmount(100) })}</span>
+          <span>{t("leaderboardReward3", { amount: formatAmount(50) })}</span>
+          <span>{t("leaderboardReward4_10", { amount: formatAmount(10) })}</span>
         </div>
       </div>
     </div>

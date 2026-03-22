@@ -5,6 +5,7 @@ import { useGame } from "@/lib/game-context"
 import { ArrowLeft, Copy, Coins, Users, Link as LinkIcon, RefreshCw, HandCoins } from "lucide-react"
 import { formatAmount } from "@/lib/format-amount"
 import { isServerPlayerId } from "@/lib/platform-user"
+import { useI18n } from "@/lib/i18n/context"
 
 type ReferralStatItem = {
   id: string
@@ -50,6 +51,7 @@ async function safeCopy(text: string) {
 }
 
 export function ReferralScreen() {
+  const { t } = useI18n()
   const { setScreen, player, platformUser, setPlayer } = useGame()
   const [stats, setStats] = useState<ReferralStatsResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -131,12 +133,12 @@ export function ReferralScreen() {
         <button
           onClick={() => setScreen("profile")}
           className="p-2 rounded-xl hover:bg-muted/40 transition-colors text-foreground"
-          aria-label="Назад"
+          aria-label={t("commonBack")}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="flex-1 text-center text-base font-bold text-foreground uppercase tracking-wider">
-          Реферальная программа
+          {t("referralTitle")}
         </h1>
         <div className="w-9" />
       </div>
@@ -144,7 +146,7 @@ export function ReferralScreen() {
       {!canUse && (
         <div className="w-full max-w-lg bg-card/50 border border-border/30 rounded-2xl p-4">
           <p className="text-sm text-muted-foreground font-medium leading-relaxed">
-            Реферальная программа доступна после входа через Telegram.
+            {t("referralNeedTelegram")}
           </p>
         </div>
       )}
@@ -154,7 +156,7 @@ export function ReferralScreen() {
           <div className="w-full max-w-lg bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4 mb-4">
             <div className="flex items-center gap-2 mb-2">
               <LinkIcon className="h-4 w-4 text-primary" />
-              <span className="font-bold text-foreground">Ваша ссылка</span>
+              <span className="font-bold text-foreground">{t("referralYourLink")}</span>
             </div>
             <div className="flex gap-2">
               <div className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-muted/20 border border-border/30 text-xs text-foreground truncate">
@@ -168,13 +170,13 @@ export function ReferralScreen() {
                 <Copy className="h-4 w-4" />
               </button>
             </div>
-            {copied === "link" && <p className="mt-2 text-xs text-primary font-bold">Ссылка скопирована</p>}
+            {copied === "link" && <p className="mt-2 text-xs text-primary font-bold">{t("referralLinkCopied")}</p>}
           </div>
 
           <div className="w-full max-w-lg bg-card/40 backdrop-blur-sm border border-border/30 rounded-2xl p-4 mb-4">
             <div className="flex items-center gap-2 mb-2">
               <Users className="h-4 w-4 text-secondary" />
-              <span className="font-bold text-foreground">Код приглашения</span>
+              <span className="font-bold text-foreground">{t("referralYourCode")}</span>
             </div>
             <div className="flex gap-2">
               <div className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-muted/20 border border-border/30 text-xs text-foreground truncate">
@@ -188,34 +190,32 @@ export function ReferralScreen() {
                 <Copy className="h-4 w-4" />
               </button>
             </div>
-            {copied === "code" && <p className="mt-2 text-xs text-secondary font-bold">Код скопирован</p>}
-            <p className="mt-2 text-xs text-muted-foreground">
-              Приглашайте друзей по ссылке/коду — вы получаете <span className="font-bold">10%</span> от их трат в игре.
-            </p>
+            {copied === "code" && <p className="mt-2 text-xs text-secondary font-bold">{t("referralCodeCopied")}</p>}
+            <p className="mt-2 text-xs text-muted-foreground">{t("referralExplain")}</p>
           </div>
 
           <div className="w-full max-w-lg grid grid-cols-3 gap-3 mb-4">
             <div className="bg-card/50 border border-border/30 rounded-2xl px-3 py-3 flex flex-col items-center">
               <Users className="h-5 w-5 text-primary mb-1" />
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">приглашено</span>
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{t("referralInvited")}</span>
               <span className="mt-1 text-lg font-extrabold text-foreground tabular-nums">{referredCount}</span>
             </div>
             <div className="bg-card/50 border border-border/30 rounded-2xl px-3 py-3 flex flex-col items-center">
               <Coins className="h-5 w-5 text-accent mb-1" />
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">их траты</span>
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{t("referralTheirSpend")}</span>
               <span className="mt-1 text-lg font-extrabold text-foreground tabular-nums">{formatAmount(totalSpend)}</span>
             </div>
             <div className="bg-card/50 border border-border/30 rounded-2xl px-3 py-3 flex flex-col items-center">
               <HandCoins className="h-5 w-5 text-secondary mb-1" />
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">получено</span>
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{t("referralEarned")}</span>
               <span className="mt-1 text-lg font-extrabold text-foreground tabular-nums">{formatAmount(totalEarned)}</span>
             </div>
           </div>
 
           <div className="w-full max-w-lg bg-card/40 border border-border/30 rounded-2xl p-4 mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs text-muted-foreground font-medium uppercase">Использование</p>
-              <p className="text-base font-extrabold text-foreground tabular-nums">{formatAmount(available)} монет</p>
+              <p className="text-xs text-muted-foreground font-medium uppercase">{t("referralUsage")}</p>
+              <p className="text-base font-extrabold text-foreground tabular-nums">{t("referralCoins", { amount: formatAmount(available) })}</p>
             </div>
             <div className="flex gap-2">
               <button
@@ -223,7 +223,7 @@ export function ReferralScreen() {
                 onClick={load}
                 disabled={loading}
                 className="px-3 py-2 rounded-xl bg-muted/30 border border-border/30 text-foreground"
-                aria-label="Обновить"
+                aria-label={t("referralRefresh")}
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               </button>
@@ -233,15 +233,15 @@ export function ReferralScreen() {
                 disabled={claiming || available <= 0}
                 className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50"
               >
-                {claiming ? "..." : "Получить"}
+                {claiming ? "..." : t("referralClaim")}
               </button>
             </div>
           </div>
 
           <div className="w-full max-w-lg bg-card/30 border border-border/30 rounded-2xl p-4">
-            <p className="text-sm font-bold text-foreground mb-3">Последние начисления</p>
+            <p className="text-sm font-bold text-foreground mb-3">{t("referralRecent")}</p>
             {last.length === 0 && (
-              <p className="text-sm text-muted-foreground">Пока нет начислений.</p>
+              <p className="text-sm text-muted-foreground">{t("referralEmpty")}</p>
             )}
             <div className="flex flex-col gap-2">
               {last.map((e) => (
@@ -251,11 +251,11 @@ export function ReferralScreen() {
                       {e.referredId} • {e.reason}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      трата {formatAmount(e.spendAmount)} → +{formatAmount(e.commissionAmount)}
+                      {t("referralSpendLine", { spend: formatAmount(e.spendAmount), gain: formatAmount(e.commissionAmount) })}
                     </p>
                   </div>
                   <span className={`text-[10px] font-bold ${e.claimedAt ? "text-muted-foreground" : "text-primary"}`}>
-                    {e.claimedAt ? "получено" : "доступно"}
+                    {e.claimedAt ? t("referralStatusClaimed") : t("referralStatusAvailable")}
                   </span>
                 </div>
               ))}

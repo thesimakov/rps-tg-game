@@ -4,8 +4,10 @@ import { useGame } from "@/lib/game-context"
 import { LogIn, Trophy, Coins, Ticket } from "lucide-react"
 import { useEffect, useState } from "react"
 import { isServerPlayerId } from "@/lib/platform-user"
+import { useI18n } from "@/lib/i18n/context"
 
 export function EntryScreen() {
+  const { t } = useI18n()
   const { setScreen, loginWithPlatform, loginAsGuest, loginErrorMessage } = useGame()
   const [showInviteCode, setShowInviteCode] = useState(false)
   const [inviteCode, setInviteCode] = useState("")
@@ -34,7 +36,7 @@ export function EntryScreen() {
     }
     if (!isServerPlayerId(code)) {
       setInviteStatus("error")
-      setInviteError("Неверный код. Пример: tg_123")
+      setInviteError(t("entryInviteInvalid"))
       return
     }
     if (typeof window !== "undefined") {
@@ -56,9 +58,7 @@ export function EntryScreen() {
               className="w-full h-full object-contain"
             />
           </div>
-          <p className="text-white/70 text-sm">
-            Играйте, делайте ставки и выводите выигрыш
-          </p>
+          <p className="text-white/70 text-sm">{t("entryTagline")}</p>
         </div>
 
         <div className="w-full flex flex-col gap-4">
@@ -73,7 +73,7 @@ export function EntryScreen() {
             className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg transition-all active:scale-[0.98] shadow-lg shadow-primary/30"
           >
             <LogIn className="h-6 w-6" />
-            Войти
+            {t("entryLogin")}
           </button>
 
           {/* Код приглашения (ввод до входа, применится после авторизации) */}
@@ -85,7 +85,7 @@ export function EntryScreen() {
             >
               <span className="flex items-center gap-2 text-sm font-semibold text-white/90">
                 <Ticket className="h-4 w-4 text-amber-400" />
-                Код приглашения
+                {t("entryInviteCode")}
               </span>
               <span
                 className={`w-10 h-6 rounded-full border transition-colors ${
@@ -107,7 +107,7 @@ export function EntryScreen() {
                   <input
                     value={inviteCode}
                     onChange={(e) => { setInviteCode(e.target.value); setInviteStatus("idle"); setInviteError("") }}
-                    placeholder="Например: tg_123"
+                    placeholder={t("entryInvitePlaceholder")}
                     className="flex-1 min-w-0 rounded-xl bg-slate-900/40 border border-white/15 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-amber-400/60"
                   />
                   <button
@@ -115,33 +115,30 @@ export function EntryScreen() {
                     onClick={handleSaveInviteCode}
                     className="px-4 py-2 rounded-xl bg-amber-400 text-amber-950 font-bold text-sm"
                   >
-                    Сохранить
+                    {t("commonSave")}
                   </button>
                 </div>
                 {inviteStatus === "saved" && (
-                  <p className="mt-2 text-xs font-bold text-emerald-300">
-                    Код сохранён. После входа мы автоматически привяжем аккаунт к пригласившему.
-                  </p>
+                  <p className="mt-2 text-xs font-bold text-emerald-300">{t("entryInviteSaved")}</p>
                 )}
                 {inviteStatus === "error" && (
                   <p className="mt-2 text-xs font-bold text-red-300">{inviteError}</p>
                 )}
                 <p className="mt-2 text-[11px] text-white/60 leading-snug">
-                  Привязка выполняется <span className="font-bold">один раз</span> после входа в Telegram.
+                  {t("entryInviteHintPrefix")}{" "}
+                  <span className="font-bold">{t("entryInviteOnce")}</span> {t("entryInviteHintSuffix")}
                 </p>
               </div>
             )}
           </div>
-          <p className="text-center text-xs text-white/50">
-            Вход через профиль Telegram. После входа можно играть, зарабатывать и тратить внутриигровые монеты и приглашать друзей.
-          </p>
+          <p className="text-center text-xs text-white/50">{t("entryFooter")}</p>
 
           <button
             onClick={() => setScreen("leaderboard")}
             className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-card/80 border border-border/50 hover:bg-card text-foreground font-semibold transition-all active:scale-[0.98]"
           >
             <Trophy className="h-5 w-5 text-amber-400" />
-            Лидеры
+            {t("entryLeaders")}
           </button>
 
           <button
@@ -149,7 +146,7 @@ export function EntryScreen() {
             className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-card/80 border border-border/50 hover:bg-card text-foreground font-semibold transition-all active:scale-[0.98]"
           >
             <Coins className="h-5 w-5 text-accent" />
-            Ставки
+            {t("entryBets")}
           </button>
 
           <button
@@ -157,8 +154,9 @@ export function EntryScreen() {
             onClick={loginAsGuest}
             className="w-full flex items-center justify-center gap-3 py-3 rounded-2xl bg-white/5 border border-white/20 hover:bg-white/10 text-white/90 font-semibold transition-all active:scale-[0.98]"
           >
-            Войти как гость
+            {t("entryGuest")}
           </button>
+          <p className="text-center text-[10px] text-white/40 leading-snug px-1">{t("futureLanguagesNote")}</p>
         </div>
       </div>
     </div>
